@@ -1,8 +1,13 @@
 package main
 
-import "fmt"
+import (
+	"log"
+)
 
 func main() {
-    res := gpt("What is the meaning of life?")
-    fmt.Println(res)
+	completion, err := gpt("What is the meaning of life?")
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println(completion)
 }
