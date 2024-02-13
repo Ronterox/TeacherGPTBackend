@@ -7,7 +7,8 @@ require (
 	github.com/PullRequestInc/go-gpt3 v1.2.0
 	github.com/joho/godotenv v1.5.1
 	github.com/ledongthuc/pdf v0.0.0-20240201131950-da5b75280b06
-	github.com/lukasjarosch/go-docx v0.4.7
+	github.com/pkoukk/tiktoken-go v0.1.6
+	github.com/pkoukk/tiktoken-go-loader v0.0.1
 )
 
 require (
@@ -16,9 +17,11 @@ require (
 	github.com/advancedlogic/GoOse v0.0.0-20191112112754-e742535969c1 // indirect
 	github.com/andybalholm/cascadia v1.2.0 // indirect
 	github.com/araddon/dateparse v0.0.0-20200409225146-d820a6159ab1 // indirect
+	github.com/dlclark/regexp2 v1.10.0 // indirect
 	github.com/fatih/set v0.2.1 // indirect
 	github.com/gigawattio/window v0.0.0-20180317192513-0f5467e35573 // indirect
 	github.com/go-resty/resty/v2 v2.3.0 // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/jaytaylor/html2text v0.0.0-20200412013138-3577fbdbcff7 // indirect
 	github.com/levigross/exp-html v0.0.0-20120902181939-8df60c69a8f5 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect

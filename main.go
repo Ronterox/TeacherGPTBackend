@@ -1,38 +1,90 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"os"
 )
 
-func parseAndWrite(filePath string, parser func(string) (string, error), outPath string) error {
+type Text string
+const GPTModel = "gpt-3.5-turbo-0125"
+const GPTPrice = 0.0005 * 0.001
+
+func (t Text) save(outPath string) error {
+    log.Println("Saving file:", outPath)
+    return os.WriteFile(outPath, []byte(t), 0644)
+}
+
+func (text Text) printPriceApprox() {
+    log.Println("Tokenizing text...")
+    tokens, err := text.tokenize()
+    if err != nil {
+        log.Fatal("Error:", err)
+    }
+    log.Println("Tokens:", tokens)
+    log.Println("Expected price: ", float32(tokens) * GPTPrice, "USD")
+}
+
+func parseAndWrite(filePath string, parser func(string) (Text, error), outPath string) (Text, error) {
 	log.Println("Parsing file:", filePath)
 	text, err := parser(filePath)
 	if err != nil {
-		return err
+		return "", err
 	}
+    return text, text.save(outPath)
+}
 
-	log.Println("Writing file:", outPath)
-	return os.WriteFile(outPath, []byte(text), 0644)
+func generateJsonAndSave(file Text, outPath string) (Text, error) {
+    completion, err := gpt(string(file))
+    if err != nil {
+        return "", err
+    }
+    completionText := Text(completion)
+    return completionText, completionText.save(outPath)
+}
+
+func generateExam(file Text, fileName string) {
+    log.Println("Generating exam from file:", fileName)
+    file.printPriceApprox()
+
+    jsonPath := "outputs/" + fileName + ".json"
+    completion, err := generateJsonAndSave(file, jsonPath)
+    if err != nil {
+        log.Fatal("Error:", err)
+    }
+
+    log.Println("Exam generated and saved to " + jsonPath)
+    log.Println(completion)
+
+    completion.printPriceApprox()
 }
 
 func main() {
+    bytes, err := json.MarshalIndent(Question{
+        Topic: "Computadoras",
+        Content: "¿Qué es la memoria RAM?",
+        Options: []string{"Memoria de solo lectura", "Memoria de acceso aleatorio", "Memoria de solo escritura", "Memoria de acceso secuencial"},
+        Answer: 2,
+    }, "", "    ")
+
+    if err != nil {
+        log.Fatal("Error:", err)
+    }
+
+    log.Println("Empty question:\n", string(bytes))
+
+    return
+
 	filePathDocx := "samples/tema1.1_introducción_computadoras.docx"
 	filePathPdf := "samples/tema_3.1._gestión_de_la_memoria_paginación_y_segmentación.pdf"
 
-	err := parseAndWrite(filePathPdf, parseDocument, "outputs/docpdf.txt")
-	err1 := parseAndWrite(filePathPdf, readPdfByRows, "outputs/pdfrows.txt")
-	err2 := parseAndWrite(filePathDocx, parseDocument, "outputs/docx.txt")
+	pdf, err := parseAndWrite(filePathPdf, parseDocument, "outputs/docpdf.txt")
+	docx, err1 := parseAndWrite(filePathDocx, parseDocument, "outputs/docx.txt")
 
-	if err != nil || err1 != nil || err2 != nil {
-		log.Fatal("Error:", err, err1, err2)
+	if err != nil || err1 != nil {
+		log.Fatal("Error:", err, err1)
 	}
 
-    text, err := os.ReadFile("outputs/docx.txt")
-	completion, err := gpt(string(text))
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println(completion)
-    os.WriteFile("outputs/gpt.json", []byte(completion), 0644)
+    generateExam(pdf, "pdf")
+    generateExam(docx, "docx")
 }
