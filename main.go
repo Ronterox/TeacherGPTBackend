@@ -1,74 +1,61 @@
 package main
 
 import (
+	"fmt"
+	"io"
 	"log"
-	"os"
+	"net/http"
 )
 
-type Text string
-const GPTModel = "gpt-3.5-turbo-0125"
-const GPTPrice = 0.0005 * 0.001
+const PORT = 8080
 
-func (t Text) save(outPath string) error {
-    log.Println("Saving file:", outPath)
-    return os.WriteFile(outPath, []byte(t), 0644)
+func sendError(err error, statusCode int, w http.ResponseWriter) {
+    w.WriteHeader(statusCode)
+    w.Write([]byte(err.Error()))
+    log.Println(err)
 }
 
-func (text Text) printPriceApprox() {
-    log.Println("Tokenizing text...")
-    tokens, err := text.tokenize()
-    if err != nil {
-        log.Fatal("Error:", err)
-    }
-    log.Println("Tokens:", tokens)
-    log.Println("Expected price: ", float32(tokens) * GPTPrice, "USD")
-}
-
-func parseAndWrite(filePath string, parser func(string) (Text, error), outPath string) (Text, error) {
-	log.Println("Parsing file:", filePath)
-	text, err := parser(filePath)
-	if err != nil {
-		return "", err
-	}
-    return text, text.save(outPath)
-}
-
-func generateJsonAndSave(file Text, outPath string) (Text, error) {
-    completion, err := gpt(string(file))
-    if err != nil {
-        return "", err
-    }
-    completionText := Text(completion)
-    return completionText, completionText.save(outPath)
-}
-
-func generateExam(file Text, fileName string) {
-    log.Println("Generating exam from file:", fileName)
-    file.printPriceApprox()
-
-    jsonPath := "outputs/" + fileName + ".json"
-    completion, err := generateJsonAndSave(file, jsonPath)
-    if err != nil {
-        log.Fatal("Error:", err)
-    }
-
-    log.Println("Exam generated and saved to " + jsonPath)
-    log.Println(completion)
-
-    completion.printPriceApprox()
+func sendOk(w http.ResponseWriter, data []byte) {
+    w.WriteHeader(http.StatusOK)
+    w.Write(data)
 }
 
 func main() {
-	filePathDocx := "samples/tema1.1_introducción_computadoras.docx"
-	filePathPdf := "samples/tema_3.1._gestión_de_la_memoria_paginación_y_segmentación.pdf"
+	http.HandleFunc("GET /template", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		temp, err := getJsonTemplate()
+		if err != nil {
+            sendError(err, http.StatusInternalServerError, w)
+			return
+		}
+        sendOk(w, []byte(temp))
+	})
 
-	pdf, err := parseAndWrite(filePathPdf, parseDocument, "outputs/docpdf.txt")
-	docx, err1 := parseAndWrite(filePathDocx, parseDocument, "outputs/docx.txt")
+	// Receive file and generate exam
+	http.HandleFunc("POST /generate", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		file, handler, err := r.FormFile("file")
+		if err != nil {
+            sendError(err, http.StatusBadRequest, w)
+			return
+		}
+		defer file.Close()
 
-	if err != nil || err1 != nil {
-		log.Fatal("Error:", err, err1)
-	}
+		fileData, err := io.ReadAll(file)
+		if err != nil {
+            sendError(err, http.StatusInternalServerError, w)
+			return
+		}
 
-    generateExam(pdf, "pdf")
-    generateExam(docx, "docx")
+		exam, err := generateExam(Text(fileData), handler.Filename)
+		if err != nil {
+            sendError(err, http.StatusInternalServerError, w)
+			return
+		}
+
+        sendOk(w, exam)
+	})
+
+	log.Printf("Server running on port %d", PORT)
+    http.ListenAndServe(fmt.Sprintf(":%d", PORT), nil)
 }

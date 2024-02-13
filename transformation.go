@@ -9,12 +9,21 @@ import (
 )
 
 func parseDocument(docPath string) (Text, error) {
-    res, err := docconv.ConvertPath(docPath)
-    if err != nil {
-        return "", err
-    }
+	res, err := docconv.ConvertPath(docPath)
+	if err != nil {
+		return "", err
+	}
 
-    return Text(res.Body), nil
+	return Text(res.Body), nil
+}
+
+func parseAndWrite(filePath string, parser func(string) (Text, error), outPath string) (Text, error) {
+	fmt.Println("Parsing file:", filePath)
+	text, err := parser(filePath)
+	if err != nil {
+		return "", err
+	}
+	return text, text.save(outPath)
 }
 
 func (text Text) tokenize() (tokens int, err error) {
