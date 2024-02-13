@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -14,6 +15,22 @@ type Question struct {
     Content string `json:"content"`
     Options []string `json:"options"`
     Answer int `json:"answer"`
+}
+
+func getJsonTemplate() (string, error) {
+    // Make this an array
+    bytes, err := json.MarshalIndent(Question{
+        Topic: "Computadoras",
+        Content: "¿Qué es la memoria RAM?",
+        Options: []string{"Memoria de solo lectura", "Memoria de acceso aleatorio", "Memoria de solo escritura", "Memoria de acceso secuencial"},
+        Answer: 2,
+    }, "", "    ")
+
+    if err != nil {
+        return "", fmt.Errorf("MarshalIndent: %v", err)
+    }
+
+    return string(bytes), nil
 }
 
 func gpt(message string) (string, error) {
@@ -29,9 +46,17 @@ func gpt(message string) (string, error) {
 	ctx := context.Background()
 	client := gpt3.NewClient(apiKey)
 
+    jsonTemplate, err := getJsonTemplate()
+    if err != nil {
+        return "", fmt.Errorf("getJsonTemplate: %v", err)
+    }
+
+    prompt := `Return a valid json object with test questions and answers about the presented text. 
+    The scheme is the following:\n%v`
+
 	resp, err := client.ChatCompletion(ctx, gpt3.ChatCompletionRequest{
 		Messages: []gpt3.ChatCompletionRequestMessage{
-            {Role: "system", Content: "Return a valid json object with test questions and answers about the presented text."}, 
+            {Role: "system", Content: fmt.Sprintf(prompt, jsonTemplate)}, 
             {Role: "user", Content: message}},
         Model: GPTModel,
 	})

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"os"
 )
@@ -60,21 +59,6 @@ func generateExam(file Text, fileName string) {
 }
 
 func main() {
-    bytes, err := json.MarshalIndent(Question{
-        Topic: "Computadoras",
-        Content: "¿Qué es la memoria RAM?",
-        Options: []string{"Memoria de solo lectura", "Memoria de acceso aleatorio", "Memoria de solo escritura", "Memoria de acceso secuencial"},
-        Answer: 2,
-    }, "", "    ")
-
-    if err != nil {
-        log.Fatal("Error:", err)
-    }
-
-    log.Println("Empty question:\n", string(bytes))
-
-    return
-
 	filePathDocx := "samples/tema1.1_introducción_computadoras.docx"
 	filePathPdf := "samples/tema_3.1._gestión_de_la_memoria_paginación_y_segmentación.pdf"
 
