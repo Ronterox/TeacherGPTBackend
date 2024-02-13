@@ -2,28 +2,27 @@ package main
 
 import (
 	"log"
+	"os"
 )
 
-func main() {
-    filePath := "samples/tema1.1_introducción_computadoras.docx"
-    text, err := parseDocx2(filePath)
-
+func parseAndWrite(filePath string, parser func(string) (string, error), outPath string) error {
+    log.Println("Parsing file:", filePath)
+    text, err := parser(filePath)
     if err != nil {
-        log.Fatal(err)
+        return err
     }
 
-    log.Println(text)
+    log.Println("Writing file:", outPath)
+    return os.WriteFile(outPath, []byte(text), 0644)
+}
 
-	// fileName := "tema_3.1._gestión_de_la_memoria_paginación_y_segmentación.pdf"
-	// dirname := "samples/"
-	//
-	// text, err := readPdfByRows(dirname + fileName)
-	//
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	//
-	// log.Println(text)
+func main() {
+    filePathDocx := "samples/tema1.1_introducción_computadoras.docx"
+	filePathPdf := "samples/tema_3.1._gestión_de_la_memoria_paginación_y_segmentación.pdf"
+
+    _ = parseAndWrite(filePathPdf, parseDocument, "outputs/docpdf.txt")
+    _ = parseAndWrite(filePathPdf, readPdfByRows, "outputs/pdfrows.txt")
+    _ = parseAndWrite(filePathDocx, parseDocument, "outputs/docx.txt")
 
 	// completion, err := gpt("What is the meaning of life?")
 	// if err != nil {
