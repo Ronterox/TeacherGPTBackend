@@ -22,8 +22,9 @@ func gpt(message string) (string, error) {
 
 	resp, err := client.ChatCompletion(ctx, gpt3.ChatCompletionRequest{
 		Messages: []gpt3.ChatCompletionRequestMessage{
-            {Role: "system", Content: "You are a helpful assistant."}, 
+            {Role: "system", Content: "Return a valid json object with questions and answers about the presented text."}, 
             {Role: "user", Content: message}},
+        Model: "gpt-3.5-turbo-0125",
 	})
 	if err != nil {
         return "", fmt.Errorf("ChatCompletion: %v", err)
