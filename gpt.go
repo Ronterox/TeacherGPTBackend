@@ -66,7 +66,7 @@ func gpt(message string) (string, error) {
 	}
 
 	prompt := `Return a valid json object with test questions and answers about the presented text. 
-    The scheme is the following:\n%v`
+    The scheme should follow the following example:\n%v`
 
 	start := time.Now()
 	resp, err := client.ChatCompletion(ctx, gpt3.ChatCompletionRequest{

@@ -1,11 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 )
 
 type Text string
+
+const TOKEN_LIMIT = 4096
+const TOTAL_TOKEN_LIMIT = 4096 * 3
+var tokenCount int
 
 func (text Text) save(outPath string) error {
 	log.Println("Saving file:", outPath)
@@ -42,6 +47,16 @@ func generateJsonAndSave(file Text, outPath string) (Text, error) {
 
 func generateExam(file Text, fileName string) ([]byte, error) {
 	log.Println("Generating exam from file:", fileName)
+
+    if tokenCount > TOTAL_TOKEN_LIMIT {
+        return nil, fmt.Errorf("Token limit exceeded")
+    }
+
+    if tokens, _ := file.tokenize(); tokens > TOKEN_LIMIT {
+        tokenCount += TOKEN_LIMIT
+        return generateExam(file[:TOKEN_LIMIT], fileName)
+    }
+
 	if err := file.printPriceApprox(); err != nil {
 		return nil, err
 	}
@@ -52,6 +67,7 @@ func generateExam(file Text, fileName string) ([]byte, error) {
 
 	outPath := "outputs/" + fileName + ".json"
 	if _, err := os.Stat(outPath); err == nil {
+        log.Println("Using cached file:", outPath)
 		return os.ReadFile(outPath)
 	}
 
