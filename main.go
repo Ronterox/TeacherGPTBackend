@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 )
@@ -41,7 +40,7 @@ func main() {
 		}
 		defer file.Close()
 
-		fileData, err := io.ReadAll(file)
+		fileData, err := parseFile(handler.Filename, file)
 		if err != nil {
             sendError(err, http.StatusInternalServerError, w)
 			return

@@ -14,8 +14,6 @@ import (
 const GPTModel = "gpt-3.5-turbo-0125"
 const GPTPrice = 0.0005 * 0.001
 
-type Questions []Question
-
 type Question struct {
 	Topic   string   `json:"topic"`
 	Content string   `json:"content"`
@@ -25,7 +23,7 @@ type Question struct {
 
 func getJsonTemplate() (string, error) {
 	// Make this an array
-	bytes, err := json.MarshalIndent(Questions{
+	bytes, err := json.MarshalIndent([]Question{
 		Question{
 			Topic:   "Computadoras",
 			Content: "¿Qué es la memoria RAM?",
@@ -67,11 +65,14 @@ func gpt(message string) (string, error) {
 
 	prompt := `Return a valid json object with test questions and answers about the presented text. 
     The scheme should follow the following example:\n%v`
+    filterPrompt := `Make sure to write the questions and answers in Spanish.
+    If you aren't able to generate a question with the given text return an empty array.`
 
 	start := time.Now()
 	resp, err := client.ChatCompletion(ctx, gpt3.ChatCompletionRequest{
 		Messages: []gpt3.ChatCompletionRequestMessage{
 			{Role: "system", Content: fmt.Sprintf(prompt, jsonTemplate)},
+			{Role: "system", Content: filterPrompt},
 			{Role: "user", Content: message}},
 		Model: GPTModel,
 	})

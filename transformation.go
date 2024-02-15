@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 
 	"code.sajari.com/docconv/v2"
 	"github.com/pkoukk/tiktoken-go"
@@ -15,6 +16,15 @@ func parseDocument(docPath string) (Text, error) {
 	}
 
 	return Text(res.Body), nil
+}
+
+func parseFile(fileName string, file io.Reader) (Text, error) {
+    res, err := docconv.Convert(file, docconv.MimeTypeByExtension(fileName), true)
+    if err != nil {
+        return "", err
+    }
+
+    return Text(res.Body), nil
 }
 
 func parseAndWrite(filePath string, parser func(string) (Text, error), outPath string) (Text, error) {
