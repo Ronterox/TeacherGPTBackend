@@ -9,7 +9,7 @@ import (
 
 type Text string
 
-const TOKEN_LIMIT = 4096
+const TOKEN_LIMIT = 512
 
 func (text Text) save(outPath string) error {
 	log.Println("Saving file:", outPath)
