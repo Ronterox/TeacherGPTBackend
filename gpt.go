@@ -28,7 +28,7 @@ func getJsonTemplate() (string, error) {
 			Topic:   "Computadoras",
 			Content: "¿Qué es la memoria RAM?",
 			Options: []string{"Memoria de solo lectura", "Memoria de acceso aleatorio", "Memoria de solo escritura", "Memoria de acceso secuencial"},
-			Answer:  2,
+			Answer:  1,
 		},
 		Question{
 			Topic:   "...",
