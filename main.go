@@ -20,7 +20,7 @@ func sendOk(w http.ResponseWriter, data []byte) {
 }
 
 func main() {
-	http.HandleFunc("GET /template", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("GET /api/template", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		temp, err := getJsonTemplate()
 		if err != nil {
@@ -31,7 +31,7 @@ func main() {
 	})
 
 	// Receive file and generate exam
-	http.HandleFunc("POST /generate", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("POST /api/generate", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		file, handler, err := r.FormFile("file")
 		if err != nil {
