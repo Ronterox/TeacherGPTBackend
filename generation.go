@@ -1,8 +1,12 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"io"
 	"log"
+	"net"
+	"net/http"
 	"os"
 	"strconv"
 )
@@ -16,14 +20,14 @@ func (text Text) save(outPath string) error {
 	return os.WriteFile(outPath, []byte(text), 0644)
 }
 
-func (text Text) printPriceApprox() error {
+func (text Text) printPriceApprox(tokensValue float32) error {
 	log.Println("Tokenizing text...")
 	tokens, err := text.tokenize()
 	if err != nil {
 		return err
 	}
 	log.Println("Tokens:", tokens)
-	log.Println("Expected price: ", float32(tokens)*GPTPrice, "USD")
+	log.Println("Expected price: ", float32(tokens)*tokensValue, "USD")
 	return nil
 }
 
@@ -36,12 +40,32 @@ func generateDir(outPath string) error {
 }
 
 func generateJsonAndSave(file Text, outPath string) (Text, error) {
-	completion, err := gpt(string(file))
+	completion, err := gptQuestions(file)
 	if err != nil {
 		return "", err
 	}
 	completionText := Text(completion)
 	return completionText, completionText.save(outPath)
+}
+
+func generateMermaidInkUrl(mermaid string) string {
+    return "https://mermaid.ink/img/" + base64.URLEncoding.EncodeToString([]byte(mermaid))
+}
+
+func getImageFromUrl(url string) ([]byte, error) {
+    res, err := http.Get(url)
+    if err != nil {
+        if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+            log.Println("Timeout, retrying...")
+            return getImageFromUrl(url)
+        }
+        return nil, err
+    }
+    img, err := io.ReadAll(res.Body)
+    if err != nil {
+        return nil, err
+    }
+    return img, nil
 }
 
 func generateExam(file Text, fileName string) ([]byte, error) {
@@ -75,7 +99,7 @@ func generateExam(file Text, fileName string) ([]byte, error) {
         return json.MarshalIndent(examResult, "", "    ")
     }
 
-	if err := file.printPriceApprox(); err != nil {
+	if err := file.printPriceApprox(GPTInputPrice); err != nil {
 		return nil, err
 	}
 
@@ -97,6 +121,6 @@ func generateExam(file Text, fileName string) ([]byte, error) {
 	log.Println("Exam generated and saved to " + outPath)
 	log.Println(completion)
 
-	completion.printPriceApprox()
+	completion.printPriceApprox(GPTOutputPrice)
 	return []byte(completion), nil
 }

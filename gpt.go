@@ -12,7 +12,8 @@ import (
 )
 
 const GPTModel = "gpt-3.5-turbo-0125"
-const GPTPrice = 0.0005 * 0.001
+const GPTInputPrice = 0.0005 * 0.001
+const GPTOutputPrice = 0.0015 * 0.001
 
 type Question struct {
 	Topic   string   `json:"topic"`
@@ -45,7 +46,7 @@ func getJsonTemplate() (string, error) {
 	return string(bytes), nil
 }
 
-func gpt(message string) (string, error) {
+func gpt(userData string, systemPrompts []gpt3.ChatCompletionRequestMessage) (string, error) {
 	fmt.Printf("Getting %v API Key from .env file...\n", GPTModel)
 	godotenv.Load()
 
@@ -58,23 +59,10 @@ func gpt(message string) (string, error) {
 	ctx := context.Background()
 	client := gpt3.NewClient(apiKey)
 
-	jsonTemplate, err := getJsonTemplate()
-	if err != nil {
-		return "", fmt.Errorf("getJsonTemplate: %v", err)
-	}
-
-	prompt := `Return a valid json object with test questions and answers about the presented text. 
-    The scheme should follow the following example:\n%v`
-    filterPrompt := `Make sure to write the questions and answers in Spanish.
-    If you aren't able to generate a question with the given text return an empty array.`
-
 	start := time.Now()
 	resp, err := client.ChatCompletion(ctx, gpt3.ChatCompletionRequest{
-		Messages: []gpt3.ChatCompletionRequestMessage{
-			{Role: "system", Content: fmt.Sprintf(prompt, jsonTemplate)},
-			{Role: "system", Content: filterPrompt},
-			{Role: "user", Content: message}},
-		Model: GPTModel,
+		Messages: append(systemPrompts, gpt3.ChatCompletionRequestMessage{Role: "user", Content: userData}),
+		Model:    GPTModel,
 	})
 	fmt.Printf("%v API call took: %v\n", GPTModel, time.Since(start))
 	if err != nil {
@@ -88,4 +76,50 @@ func gpt(message string) (string, error) {
 	fmt.Printf("TotalTokens: %v\n", usage.TotalTokens)
 
 	return resp.Choices[0].Message.Content, nil
+}
+
+func gptQuestions(data Text) (string, error) {
+	jsonTemplate, err := getJsonTemplate()
+	if err != nil {
+		return "", fmt.Errorf("getJsonTemplate: %v", err)
+	}
+
+	prompt := `Return a valid json object with test questions and answers about the presented text. 
+    The scheme should follow the following example:\n%v`
+	filterPrompt := `Make sure to write the questions and answers in Spanish.
+    If you aren't able to generate a question with the given text return an empty array.`
+
+	systemPrompts := []gpt3.ChatCompletionRequestMessage{
+		{Role: "system", Content: fmt.Sprintf(prompt, jsonTemplate)},
+		{Role: "system", Content: filterPrompt}}
+
+	return gpt(string(data), systemPrompts)
+}
+
+func gptMindMap(data Text) (string, error) {
+    codeExample := `mindmap
+    )mindmap(
+        (Origins)
+            [Long history]
+            ::icon(fa fa-book)
+            (Popularisation)
+                [British popular psychology author Tony Buzan]
+        (Research)
+            [On effectivness<br/>and features]
+            [On Automatic creation]
+                (Uses)
+                    [Creative techniques]
+                    [Strategic planning]
+                    [Argument mapping]`
+
+    prompt := `Return just a valid Mermaid Mindmap of the presented text.
+    This is an example of how a Mindmap should look like:\n%v`
+    filterPrompt := `The syntax for creating Mindmaps relies on indentation for setting the levels in the hierarchy.
+    Please use the following syntax )For the root(, (For Titles) and [For subtitles]. Don't ever use parenthesis inside of brackets.`
+
+    systemPrompts := []gpt3.ChatCompletionRequestMessage{
+        {Role: "system", Content: fmt.Sprintf(prompt, codeExample)},
+        {Role: "system", Content: filterPrompt}}
+
+    return gpt(string(data), systemPrompts)
 }
