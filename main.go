@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"log"
@@ -86,6 +87,8 @@ func main() {
 
 	http.HandleFunc("POST /api/summary", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "image/jpeg")
+        w.Header().Set("Access-Control-Allow-Origin", "*")
+        w.Header().Set("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers")
         log.Println("Generating summary image...")
 
         fileData, _, err := handleFile(w, r)
@@ -114,7 +117,7 @@ func main() {
             return
         }
 
-        sendOk(w, img)
+        sendOk(w, []byte(base64.StdEncoding.EncodeToString(img)))
 	})
 
 	http.HandleFunc("POST /api/generate", func(w http.ResponseWriter, r *http.Request) {
