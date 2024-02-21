@@ -97,8 +97,8 @@ func gptQuestions(data Text) (string, error) {
 }
 
 func gptMindMap(data Text) (string, error) {
-    codeExample := `mindmap
-    )mindmap(
+	codeExample := `mindmap
+    )My Mindmap(
         (Origins)
             [Long history]
             ::icon(fa fa-book)
@@ -112,14 +112,17 @@ func gptMindMap(data Text) (string, error) {
                     [Strategic planning]
                     [Argument mapping]`
 
-    prompt := `Return just a valid Mermaid Mindmap of the presented text.
+	prompt := `Return just a valid Mermaid Mindmap of the presented text.
     This is an example of how a Mindmap should look like:\n%v`
-    filterPrompt := `The syntax for creating Mindmaps relies on indentation for setting the levels in the hierarchy.
-    Please use the following syntax )For the root(, (For Titles) and [For subtitles]. Don't ever use parenthesis inside of brackets.`
+	filterPrompt := `The syntax for creating Mindmaps relies on indentation for setting the levels in the hierarchy.
+    Please use the following syntax )For the root(, (For Titles) and [For subtitles].`
+    jailPrompt := `Don't ever use parenthesis inside of brackets. You can only use tabs and spaces for indentation. 
+    There can only be one root, at idented level 0, and please return the content in Spanish.`
 
-    systemPrompts := []gpt3.ChatCompletionRequestMessage{
-        {Role: "system", Content: fmt.Sprintf(prompt, codeExample)},
-        {Role: "system", Content: filterPrompt}}
+	systemPrompts := []gpt3.ChatCompletionRequestMessage{
+		{Role: "system", Content: fmt.Sprintf(prompt, codeExample)},
+		{Role: "system", Content: filterPrompt},
+		{Role: "system", Content: jailPrompt}}
 
-    return gpt(string(data), systemPrompts)
+	return gpt(string(data), systemPrompts)
 }

@@ -8,6 +8,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -48,6 +49,10 @@ func handleMermaid(mermaid string) ([]byte, error) {
     return getImageFromUrl(mermaidUrl)
 }
 
+func imageToBase64(img []byte) string {
+    return fmt.Sprintf("data:image/jpeg;base64,%v", base64.StdEncoding.EncodeToString(img))
+}
+
 func main() {
 	http.HandleFunc("GET /api/template", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -63,7 +68,9 @@ func main() {
 		log.Println("Parsing file...")
 		if fileData, _, err := handleFile(w, r); err == nil {
 			sendOk(w, []byte(fileData))
-		}
+		} else {
+            sendError(err, http.StatusBadRequest, w)
+        }
 	})
 
 	http.HandleFunc("POST /api/mermaid", func(w http.ResponseWriter, r *http.Request) {
@@ -86,13 +93,26 @@ func main() {
 	})
 
 	http.HandleFunc("POST /api/summary", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "image/jpeg")
         w.Header().Set("Access-Control-Allow-Origin", "*")
         w.Header().Set("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers")
         log.Println("Generating summary image...")
 
-        fileData, _, err := handleFile(w, r)
+        fileData, handler, err := handleFile(w, r)
         if err != nil {
+            sendError(err, http.StatusBadRequest, w)
+            return
+        }
+
+        filePath := fmt.Sprintf("outputs/%v.jpg", handler.Filename)
+
+        if _, err := os.Stat(filePath); !os.IsNotExist(err) {
+            log.Println("Caching image file...")
+            img, err := os.ReadFile(filePath)
+            if err != nil {
+                sendError(err, http.StatusInternalServerError, w)
+                return
+            }
+            sendOk(w, []byte(imageToBase64(img)))
             return
         }
 
@@ -108,7 +128,7 @@ func main() {
         bytesMap = bytes.ReplaceAll(bytesMap, []byte("-"), []byte(" "))
 
         mindMap = strings.TrimSpace(string(bytesMap))
-        log.Println("Mindmap:", mindMap)
+        log.Println("Mindmap:\n", mindMap)
 
         log.Println("Generating mermaid image...")
         img, err := handleMermaid(mindMap)
@@ -117,13 +137,18 @@ func main() {
             return
         }
 
-        sendOk(w, []byte(base64.StdEncoding.EncodeToString(img)))
+        if err := generateDir("outputs"); err == nil {
+            Text(img).save(filePath)
+        }
+
+        sendOk(w, []byte(imageToBase64(img)))
 	})
 
 	http.HandleFunc("POST /api/generate", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		fileData, handler, err := handleFile(w, r)
 		if err != nil {
+            sendError(err, http.StatusBadRequest, w)
 			return
 		}
 
