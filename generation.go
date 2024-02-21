@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/base64"
 	"encoding/json"
+	"image"
 	"io"
 	"log"
 	"net"
@@ -62,10 +63,8 @@ func getImageFromUrl(url string) ([]byte, error) {
         return nil, err
     }
     img, err := io.ReadAll(res.Body)
-    if err != nil {
-        return nil, err
-    }
-    return img, nil
+    _,_,err = image.Decode(res.Body)
+    return img, err
 }
 
 func generateExam(file Text, fileName string) ([]byte, error) {

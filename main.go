@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"io"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -62,34 +61,6 @@ func main() {
 			return
 		}
 		sendOk(w, []byte(temp))
-	})
-
-	http.HandleFunc("POST /api/parse", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("Parsing file...")
-		if fileData, _, err := handleFile(w, r); err == nil {
-			sendOk(w, []byte(fileData))
-		} else {
-            sendError(err, http.StatusBadRequest, w)
-        }
-	})
-
-	http.HandleFunc("POST /api/mermaid", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "image/jpeg")
-        log.Println("Generating mermaid image...")
-
-		body, err := io.ReadAll(r.Body)
-        if err != nil {
-            sendError(err, http.StatusBadRequest, w)
-            return
-        }
-
-		img, err := handleMermaid(string(body))
-		if err != nil {
-			sendError(err, http.StatusInternalServerError, w)
-			return
-		}
-
-		sendOk(w, img)
 	})
 
 	http.HandleFunc("POST /api/summary", func(w http.ResponseWriter, r *http.Request) {
