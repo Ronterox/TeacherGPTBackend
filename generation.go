@@ -1,9 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"image"
+	"image/jpeg"
 	"io"
 	"log"
 	"net"
@@ -50,53 +51,53 @@ func generateJsonAndSave(file Text, outPath string) (Text, error) {
 }
 
 func generateMermaidInkUrl(mermaid string) string {
-    return "https://mermaid.ink/img/" + base64.URLEncoding.EncodeToString([]byte(mermaid))
+	return "https://mermaid.ink/img/" + base64.URLEncoding.EncodeToString([]byte(mermaid))
 }
 
 func getImageFromUrl(url string) ([]byte, error) {
-    res, err := http.Get(url)
-    if err != nil {
-        if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-            log.Println("Timeout, retrying...")
-            return getImageFromUrl(url)
-        }
-        return nil, err
-    }
-    img, err := io.ReadAll(res.Body)
-    _,_,err = image.Decode(res.Body)
-    return img, err
+	res, err := http.Get(url)
+	if err != nil {
+		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+			log.Println("Timeout, retrying...")
+			return getImageFromUrl(url)
+		}
+		return nil, err
+	}
+	img, err := io.ReadAll(res.Body)
+	_, err = jpeg.Decode(bytes.NewReader(img))
+	return img, err
 }
 
 func generateExam(file Text, fileName string) ([]byte, error) {
 	log.Println("Generating exam from file:", fileName)
 
-    if tokens, _ := file.tokenize(); tokens > TOKEN_LIMIT {
-        CHUNKS := tokens / TOKEN_LIMIT
-        var examResult []Question
-        for i := range CHUNKS {
-            log.Println("Generating exam from file:", fileName + "_" + strconv.Itoa(i) + "... current", i, "of", CHUNKS)
+	if tokens, _ := file.tokenize(); tokens > TOKEN_LIMIT {
+		CHUNKS := tokens / TOKEN_LIMIT
+		var examResult []Question
+		for i := range CHUNKS {
+			log.Println("Generating exam from file:", fileName+"_"+strconv.Itoa(i)+"... current", i, "of", CHUNKS)
 
-            chunkFile := file[i*TOKEN_LIMIT:(i+1)*TOKEN_LIMIT]
-            chunkName := fileName + "_" + strconv.Itoa(i)
+			chunkFile := file[i*TOKEN_LIMIT : (i+1)*TOKEN_LIMIT]
+			chunkName := fileName + "_" + strconv.Itoa(i)
 
-            chunkPath := "outputs/" + chunkName + ".chunk"
-            if _, err := os.Stat(chunkPath); err != nil {
-                chunkFile.save(chunkPath)
-            }
+			chunkPath := "outputs/" + chunkName + ".chunk"
+			if _, err := os.Stat(chunkPath); err != nil {
+				chunkFile.save(chunkPath)
+			}
 
-            bytes, err := generateExam(chunkFile, chunkName)
-            if err != nil {
-                return nil, err
-            }
+			bytes, err := generateExam(chunkFile, chunkName)
+			if err != nil {
+				return nil, err
+			}
 
-            var exam []Question
-            json.Unmarshal(bytes, &exam)
+			var exam []Question
+			json.Unmarshal(bytes, &exam)
 
-            examResult = append(examResult, exam...)
-        }
+			examResult = append(examResult, exam...)
+		}
 
-        return json.MarshalIndent(examResult, "", "    ")
-    }
+		return json.MarshalIndent(examResult, "", "    ")
+	}
 
 	if err := file.printPriceApprox(GPTInputPrice); err != nil {
 		return nil, err
@@ -108,7 +109,7 @@ func generateExam(file Text, fileName string) ([]byte, error) {
 
 	outPath := "outputs/" + fileName + ".json"
 	if _, err := os.Stat(outPath); err == nil {
-        log.Println("Using cached file:", outPath)
+		log.Println("Using cached file:", outPath)
 		return os.ReadFile(outPath)
 	}
 

@@ -25,7 +25,7 @@ func sendOk(w http.ResponseWriter, data []byte) {
 }
 
 func handleFile(w http.ResponseWriter, r *http.Request) (Text, *multipart.FileHeader, error) {
-    log.Println("Handling file...")
+	log.Println("Handling file...")
 	file, handler, err := r.FormFile("file")
 	if err != nil {
 		sendError(err, http.StatusBadRequest, w)
@@ -33,7 +33,7 @@ func handleFile(w http.ResponseWriter, r *http.Request) (Text, *multipart.FileHe
 	}
 	defer file.Close()
 
-    log.Println("Parsing " + handler.Filename + "...")
+	log.Println("Parsing " + handler.Filename + "...")
 	fileData, err := parseFile(handler.Filename, file)
 	if err != nil {
 		sendError(err, http.StatusInternalServerError, w)
@@ -44,17 +44,23 @@ func handleFile(w http.ResponseWriter, r *http.Request) (Text, *multipart.FileHe
 }
 
 func handleMermaid(mermaid string) ([]byte, error) {
-    mermaidUrl := generateMermaidInkUrl(mermaid)
-    return getImageFromUrl(mermaidUrl)
+	mermaidUrl := generateMermaidInkUrl(mermaid)
+	return getImageFromUrl(mermaidUrl)
 }
 
 func imageToBase64(img []byte) string {
-    return fmt.Sprintf("data:image/jpeg;base64,%v", base64.StdEncoding.EncodeToString(img))
+	return fmt.Sprintf("data:image/jpeg;base64,%v", base64.StdEncoding.EncodeToString(img))
+}
+
+func allowCORS(w http.ResponseWriter) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers")
 }
 
 func main() {
 	http.HandleFunc("GET /api/template", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		allowCORS(w)
 		temp, err := getJsonTemplate()
 		if err != nil {
 			sendError(err, http.StatusInternalServerError, w)
@@ -64,62 +70,63 @@ func main() {
 	})
 
 	http.HandleFunc("POST /api/summary", func(w http.ResponseWriter, r *http.Request) {
-        w.Header().Set("Access-Control-Allow-Origin", "*")
-        w.Header().Set("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers")
-        log.Println("Generating summary image...")
+		log.Println("Generating summary image...")
+		allowCORS(w)
 
-        fileData, handler, err := handleFile(w, r)
-        if err != nil {
-            sendError(err, http.StatusBadRequest, w)
-            return
-        }
+		fileData, handler, err := handleFile(w, r)
+		if err != nil {
+			sendError(err, http.StatusBadRequest, w)
+			return
+		}
 
-        filePath := fmt.Sprintf("outputs/%v.jpg", handler.Filename)
+		filePath := fmt.Sprintf("outputs/%v.jpg", handler.Filename)
 
-        if _, err := os.Stat(filePath); !os.IsNotExist(err) {
-            log.Println("Caching image file...")
-            img, err := os.ReadFile(filePath)
-            if err != nil {
-                sendError(err, http.StatusInternalServerError, w)
-                return
-            }
-            sendOk(w, []byte(imageToBase64(img)))
-            return
-        }
+		if _, err := os.Stat(filePath); !os.IsNotExist(err) {
+			log.Println("Caching image file...")
+			img, err := os.ReadFile(filePath)
+			if err != nil {
+				sendError(err, http.StatusInternalServerError, w)
+				return
+			}
+			sendOk(w, []byte(imageToBase64(img)))
+			return
+		}
 
-        log.Println("Generating mindmap...")
-        mindMap, err := gptMindMap(fileData)
-        if err != nil {
-            sendError(err, http.StatusInternalServerError, w)
-            return
-        }
+		log.Println("Generating mindmap...")
+		mindMap, err := gptMindMap(fileData)
+		if err != nil {
+			sendError(err, http.StatusInternalServerError, w)
+			return
+		}
 
-        bytesMap := bytes.Replace([]byte(mindMap), []byte("```mermaid"), []byte(""), 1)
-        bytesMap = bytes.Replace(bytesMap, []byte("```"), []byte(""), 1)
-        bytesMap = bytes.ReplaceAll(bytesMap, []byte("-"), []byte(" "))
+		bytesMap := bytes.Replace([]byte(mindMap), []byte("```mermaid"), []byte(""), 1)
+		bytesMap = bytes.Replace(bytesMap, []byte("```"), []byte(""), 1)
+		bytesMap = bytes.ReplaceAll(bytesMap, []byte("-"), []byte(" "))
 
-        mindMap = strings.TrimSpace(string(bytesMap))
-        log.Println("Mindmap:\n", mindMap)
+		mindMap = strings.TrimSpace(string(bytesMap))
+		log.Println("Mindmap:\n", mindMap)
 
-        log.Println("Generating mermaid image...")
-        img, err := handleMermaid(mindMap)
-        if err != nil {
-            sendError(err, http.StatusInternalServerError, w)
-            return
-        }
+		log.Println("Generating mermaid image...")
+		img, err := handleMermaid(mindMap)
+		if err != nil {
+			sendError(err, http.StatusInternalServerError, w)
+			return
+		}
 
-        if err := generateDir("outputs"); err == nil {
-            Text(img).save(filePath)
-        }
+		if err := generateDir("outputs"); err == nil {
+			Text(img).save(filePath)
+		}
 
-        sendOk(w, []byte(imageToBase64(img)))
+		sendOk(w, []byte(imageToBase64(img)))
 	})
 
 	http.HandleFunc("POST /api/generate", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		allowCORS(w)
+
 		fileData, handler, err := handleFile(w, r)
 		if err != nil {
-            sendError(err, http.StatusBadRequest, w)
+			sendError(err, http.StatusBadRequest, w)
 			return
 		}
 
