@@ -43,8 +43,22 @@ func handleFile(w http.ResponseWriter, r *http.Request) (Text, *multipart.FileHe
 	return Text(fileData), handler, nil
 }
 
-func handleMermaid(mermaid string) ([]byte, error) {
-	mermaidUrl := generateMermaidInkUrl(mermaid)
+func generateMermaidImage(fileData Text) ([]byte, error) {
+	log.Println("Generating mindmap...")
+	mindMap, err := gptMindMap(fileData)
+	if err != nil {
+		return nil, err
+	}
+
+	bytesMap := bytes.Replace([]byte(mindMap), []byte("```mermaid"), []byte(""), 1)
+	bytesMap = bytes.Replace(bytesMap, []byte("```"), []byte(""), 1)
+	bytesMap = bytes.ReplaceAll(bytesMap, []byte("-"), []byte(" "))
+
+	mindMap = strings.TrimSpace(string(bytesMap))
+	log.Println("Mindmap:\n", mindMap)
+
+	log.Println("Generating mermaid image...")
+	mermaidUrl := generateMermaidInkUrl(mindMap)
 	return getImageFromUrl(mermaidUrl)
 }
 
@@ -58,6 +72,8 @@ func allowCORS(w http.ResponseWriter) {
 }
 
 func main() {
+	var currentlyGeneratingFiles = make(map[string]int)
+
 	http.HandleFunc("GET /api/template", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		allowCORS(w)
@@ -92,26 +108,14 @@ func main() {
 			return
 		}
 
-		log.Println("Generating mindmap...")
-		mindMap, err := gptMindMap(fileData)
-		if err != nil {
-			sendError(err, http.StatusInternalServerError, w)
-			return
-		}
-
-		bytesMap := bytes.Replace([]byte(mindMap), []byte("```mermaid"), []byte(""), 1)
-		bytesMap = bytes.Replace(bytesMap, []byte("```"), []byte(""), 1)
-		bytesMap = bytes.ReplaceAll(bytesMap, []byte("-"), []byte(" "))
-
-		mindMap = strings.TrimSpace(string(bytesMap))
-		log.Println("Mindmap:\n", mindMap)
-
-		log.Println("Generating mermaid image...")
-		img, err := handleMermaid(mindMap)
-		if err != nil {
-			sendError(err, http.StatusInternalServerError, w)
-			return
-		}
+        img, err := generateMermaidImage(fileData); 
+        for ;err != nil; img, err = generateMermaidImage(fileData) {
+            currentlyGeneratingFiles[handler.Filename]++
+            if currentlyGeneratingFiles[handler.Filename] > 3 {
+                sendError(err, http.StatusInternalServerError, w)
+                return
+            }
+        }
 
 		if err := generateDir("outputs"); err == nil {
 			Text(img).save(filePath)
