@@ -28,6 +28,7 @@ type QuestionOpen struct {
 	Answer  string `json:"answer"`
 	Correct bool   `json:"correct"`
 	Reason  string `json:"reason"`
+	Chunk   string `json:"chunk"`
 }
 
 func getJsonTemplate() (string, error) {
@@ -53,6 +54,7 @@ func getJsonTemplateOpen() (string, error) {
 		QuestionOpen{
 			Topic:   "Computadoras",
 			Content: "¿Qué es la memoria RAM?",
+			Chunk:   "La memoria RAM es una memoria de acceso aleatorio que se utiliza para almacenar datos e instrucciones. Es una memoria volátil, lo que significa que los datos se pierden cuando se apaga la computadora. La memoria RAM es más rápida que la memoria de almacenamiento a largo plazo, como los discos duros y las unidades de estado sólido, pero también es más cara y tiene una capacidad de almacenamiento más limitada.",
 		},
 		QuestionOpen{
 			Topic:   "...",
@@ -108,9 +110,9 @@ func gptQuestions(data Text, open bool) (string, error) {
 
 	if open {
 		jsonTemplate, err = getJsonTemplateOpen()
-        prompt = `Return a valid json object with test questions about the presented text.
+		prompt = `Return a valid json object with test questions about the presented text.
         The scheme should follow the following example:\n%v`
-        filterPrompt = `Make sure to write the questions in Spanish.
+		filterPrompt = `Make sure to write the questions in Spanish.
         If you aren't able to generate a question with the given text return an empty array.`
 	} else {
 		jsonTemplate, err = getJsonTemplate()

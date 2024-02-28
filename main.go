@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
 	"mime/multipart"
@@ -10,6 +11,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/PullRequestInc/go-gpt3"
 )
 
 const PORT = 8080
@@ -123,7 +126,7 @@ func main() {
 		sendOk(w, []byte(img))
 	})
 
-	http.HandleFunc("PUT /api/generate", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("POST /api/generate/open", func(w http.ResponseWriter, r *http.Request) {
 		setJsonCORSHeader(w)
 
 		fileData, handler, err := handleFile(r)
@@ -132,13 +135,34 @@ func main() {
 			return
 		}
 
-		exam, err := generateExam(fileData, handler.Filename, true)
+		exam, err := generateExam[QuestionOpen](fileData, handler.Filename, true)
 		if err != nil {
 			sendError(err, http.StatusInternalServerError, w)
 			return
 		}
 
 		sendOk(w, exam)
+	})
+
+	http.HandleFunc("POST /api/correct", func(w http.ResponseWriter, r *http.Request) {
+		setJsonCORSHeader(w)
+		var openQuestions []QuestionOpen
+		if err := json.NewDecoder(r.Body).Decode(&openQuestions); err != nil {
+			sendError(err, http.StatusBadRequest, w)
+			return
+		}
+
+		stringJson, _ := json.MarshalIndent(openQuestions, "", "    ")
+		res, err := gpt(string(stringJson), []gpt3.ChatCompletionRequestMessage{
+			{Role: "system", Content: "Return a valid json object with the correct answers for the presented questions."},
+			{Role: "system", Content: "Make sure to write the answers in Spanish."}})
+
+        if err != nil {
+            sendError(err, http.StatusInternalServerError, w)
+            return
+        }
+
+        sendOk(w, []byte(res))
 	})
 
 	http.HandleFunc("POST /api/generate", func(w http.ResponseWriter, r *http.Request) {
@@ -150,7 +174,7 @@ func main() {
 			return
 		}
 
-		exam, err := generateExam(Text(fileData), handler.Filename, false)
+		exam, err := generateExam[Question](Text(fileData), handler.Filename, false)
 		if err != nil {
 			sendError(err, http.StatusInternalServerError, w)
 			return

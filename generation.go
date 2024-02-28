@@ -49,12 +49,12 @@ func generateMermaidInkUrl(mermaid string) string {
 	return "https://mermaid.ink/img/" + base64.URLEncoding.EncodeToString([]byte(mermaid))
 }
 
-func generateExam(file Text, fileName string, open bool) ([]byte, error) {
+func generateExam[T Question | QuestionOpen](file Text, fileName string, open bool) ([]byte, error) {
 	log.Println("Generating exam from file:", fileName)
 
 	if tokens, _ := file.tokenize(); tokens > TOKEN_LIMIT {
 		CHUNKS := tokens / TOKEN_LIMIT
-		var examResult []Question
+		var examResult []T
 		for i := range CHUNKS {
 			log.Printf("Generating exam from file: %s_%d... current %d of %d\n", fileName, i, i, CHUNKS)
 
@@ -66,12 +66,12 @@ func generateExam(file Text, fileName string, open bool) ([]byte, error) {
 				chunkFile.save(chunkPath)
 			}
 
-			bytes, err := generateExam(chunkFile, chunkName, open)
+			bytes, err := generateExam[T](chunkFile, chunkName, open)
 			if err != nil {
 				return nil, err
 			}
 
-			var exam []Question
+			var exam []T
 			json.Unmarshal(bytes, &exam)
 
 			examResult = append(examResult, exam...)
