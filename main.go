@@ -73,26 +73,30 @@ func allowCORS(w http.ResponseWriter) {
 
 func setJsonCORSHeader(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
-    allowCORS(w)
+	allowCORS(w)
+}
+
+func sendTemplate(w http.ResponseWriter, generateTemplate func() (string, error)) {
+	setJsonCORSHeader(w)
+	temp, err := generateTemplate()
+	if err != nil {
+		sendError(err, http.StatusInternalServerError, w)
+		return
+	}
+	sendOk(w, []byte(temp))
 }
 
 func main() {
-	http.HandleFunc("GET /api/template", func(w http.ResponseWriter, r *http.Request) {
-		setJsonCORSHeader(w)
-		temp, err := getJsonTemplate()
-		if err != nil {
-			sendError(err, http.StatusInternalServerError, w)
-			return
-		}
-		sendOk(w, []byte(temp))
-	})
+	http.HandleFunc("GET /api/template", func(w http.ResponseWriter, r *http.Request) { sendTemplate(w, getJsonTemplate) })
+
+	http.HandleFunc("GET /api/template/open", func(w http.ResponseWriter, r *http.Request) { sendTemplate(w, getJsonTemplateOpen) })
 
 	http.HandleFunc("POST /api/summary", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Generating summary image...")
 		allowCORS(w)
 
 		fileData, handler, err := handleFile(r)
-        if code, _ := strconv.Atoi(string(fileData)); err != nil {
+		if code, _ := strconv.Atoi(string(fileData)); err != nil {
 			sendError(err, code, w)
 			return
 		}
@@ -110,11 +114,11 @@ func main() {
 			return
 		}
 
-        img, err := generateMermaidImage(fileData)
-        if err != nil {
-            sendError(err, http.StatusInternalServerError, w)
-            return
-        }
+		img, err := generateMermaidImage(fileData)
+		if err != nil {
+			sendError(err, http.StatusInternalServerError, w)
+			return
+		}
 
 		sendOk(w, []byte(img))
 	})
@@ -122,25 +126,31 @@ func main() {
 	http.HandleFunc("PUT /api/generate", func(w http.ResponseWriter, r *http.Request) {
 		setJsonCORSHeader(w)
 
-		// fileData, handler, err := handleFile(r)
-  //       if code, _ := strconv.Atoi(string(fileData)); err != nil {
-		// 	sendError(err, code, w)
-		// 	return
-		// }
+		fileData, handler, err := handleFile(r)
+		if code, _ := strconv.Atoi(string(fileData)); err != nil {
+			sendError(err, code, w)
+			return
+		}
 
-        // exam, err := generateExam(fileData, handler.Filename)
+		exam, err := generateExam(fileData, handler.Filename, true)
+		if err != nil {
+			sendError(err, http.StatusInternalServerError, w)
+			return
+		}
+
+		sendOk(w, exam)
 	})
 
 	http.HandleFunc("POST /api/generate", func(w http.ResponseWriter, r *http.Request) {
 		setJsonCORSHeader(w)
 
 		fileData, handler, err := handleFile(r)
-        if code, _ := strconv.Atoi(string(fileData)); err != nil {
+		if code, _ := strconv.Atoi(string(fileData)); err != nil {
 			sendError(err, code, w)
 			return
 		}
 
-		exam, err := generateExam(Text(fileData), handler.Filename)
+		exam, err := generateExam(Text(fileData), handler.Filename, false)
 		if err != nil {
 			sendError(err, http.StatusInternalServerError, w)
 			return

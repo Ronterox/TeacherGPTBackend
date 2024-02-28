@@ -1,14 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"image/jpeg"
-	"io"
 	"log"
-	"net"
-	"net/http"
 	"os"
 	"strconv"
 )
@@ -41,8 +36,8 @@ func generateDir(outPath string) error {
 	return nil
 }
 
-func generateJsonAndSave(file Text, outPath string) (Text, error) {
-	completion, err := gptQuestions(file)
+func generateJsonAndSave(file Text, outPath string, open bool) (Text, error) {
+	completion, err := gptQuestions(file, open)
 	if err != nil {
 		return "", err
 	}
@@ -54,21 +49,7 @@ func generateMermaidInkUrl(mermaid string) string {
 	return "https://mermaid.ink/img/" + base64.URLEncoding.EncodeToString([]byte(mermaid))
 }
 
-func getImageFromUrl(url string) ([]byte, error) {
-	res, err := http.Get(url)
-	if err != nil {
-		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-			log.Println("Timeout, retrying...")
-			return getImageFromUrl(url)
-		}
-		return nil, err
-	}
-	img, err := io.ReadAll(res.Body)
-	_, err = jpeg.Decode(bytes.NewReader(img))
-	return img, err
-}
-
-func generateExam(file Text, fileName string) ([]byte, error) {
+func generateExam(file Text, fileName string, open bool) ([]byte, error) {
 	log.Println("Generating exam from file:", fileName)
 
 	if tokens, _ := file.tokenize(); tokens > TOKEN_LIMIT {
@@ -85,7 +66,7 @@ func generateExam(file Text, fileName string) ([]byte, error) {
 				chunkFile.save(chunkPath)
 			}
 
-			bytes, err := generateExam(chunkFile, chunkName)
+			bytes, err := generateExam(chunkFile, chunkName, open)
 			if err != nil {
 				return nil, err
 			}
@@ -113,7 +94,7 @@ func generateExam(file Text, fileName string) ([]byte, error) {
 		return os.ReadFile(outPath)
 	}
 
-	completion, err := generateJsonAndSave(file, outPath)
+	completion, err := generateJsonAndSave(file, outPath, open)
 	if err != nil {
 		return nil, err
 	}

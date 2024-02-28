@@ -102,34 +102,27 @@ func gpt(userData string, systemPrompts []gpt3.ChatCompletionRequestMessage) (st
 	return resp.Choices[0].Message.Content, nil
 }
 
-func gptQuestions(data Text) (string, error) {
-	jsonTemplate, err := getJsonTemplate()
+func gptQuestions(data Text, open bool) (string, error) {
+	var jsonTemplate, prompt, filterPrompt string
+	var err error
+
+	if open {
+		jsonTemplate, err = getJsonTemplateOpen()
+        prompt = `Return a valid json object with test questions about the presented text.
+        The scheme should follow the following example:\n%v`
+        filterPrompt = `Make sure to write the questions in Spanish.
+        If you aren't able to generate a question with the given text return an empty array.`
+	} else {
+		jsonTemplate, err = getJsonTemplate()
+		prompt = `Return a valid json object with test questions and answers about the presented text. 
+        The scheme should follow the following example:\n%v`
+		filterPrompt = `Make sure to write the questions and answers in Spanish.
+        If you aren't able to generate a question with the given text return an empty array.`
+	}
+
 	if err != nil {
 		return "", fmt.Errorf("getJsonTemplate: %v", err)
 	}
-
-	prompt := `Return a valid json object with test questions and answers about the presented text. 
-    The scheme should follow the following example:\n%v`
-	filterPrompt := `Make sure to write the questions and answers in Spanish.
-    If you aren't able to generate a question with the given text return an empty array.`
-
-	systemPrompts := []gpt3.ChatCompletionRequestMessage{
-		{Role: "system", Content: fmt.Sprintf(prompt, jsonTemplate)},
-		{Role: "system", Content: filterPrompt}}
-
-	return gpt(string(data), systemPrompts)
-}
-
-func gptQuestionsOpen(data Text) (string, error) {
-	jsonTemplate, err := getJsonTemplate()
-	if err != nil {
-		return "", fmt.Errorf("getJsonTemplate: %v", err)
-	}
-
-	prompt := `Return a valid json object with test questions and answers about the presented text. 
-    The scheme should follow the following example:\n%v`
-	filterPrompt := `Make sure to write the questions and answers in Spanish.
-    If you aren't able to generate a question with the given text return an empty array.`
 
 	systemPrompts := []gpt3.ChatCompletionRequestMessage{
 		{Role: "system", Content: fmt.Sprintf(prompt, jsonTemplate)},

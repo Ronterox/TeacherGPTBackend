@@ -16,8 +16,8 @@ func TestGeneration(t *testing.T) {
 		log.Fatal("Error:", err, err1)
 	}
 
-    _, err = generateExam(pdf, "pdf")
-    _, err1 = generateExam(docx, "docx")
+    _, err = generateExam(pdf, "pdf", false)
+    _, err1 = generateExam(docx, "docx", false)
 
 	if err != nil || err1 != nil {
 		log.Fatal("Error:", err, err1)
