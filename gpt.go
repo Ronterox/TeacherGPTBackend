@@ -120,6 +120,24 @@ func gptQuestions(data Text) (string, error) {
 	return gpt(string(data), systemPrompts)
 }
 
+func gptQuestionsOpen(data Text) (string, error) {
+	jsonTemplate, err := getJsonTemplate()
+	if err != nil {
+		return "", fmt.Errorf("getJsonTemplate: %v", err)
+	}
+
+	prompt := `Return a valid json object with test questions and answers about the presented text. 
+    The scheme should follow the following example:\n%v`
+	filterPrompt := `Make sure to write the questions and answers in Spanish.
+    If you aren't able to generate a question with the given text return an empty array.`
+
+	systemPrompts := []gpt3.ChatCompletionRequestMessage{
+		{Role: "system", Content: fmt.Sprintf(prompt, jsonTemplate)},
+		{Role: "system", Content: filterPrompt}}
+
+	return gpt(string(data), systemPrompts)
+}
+
 func gptMindMap(data Text) (string, error) {
 	codeExample := `mindmap
     )My Mindmap(

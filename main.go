@@ -59,7 +59,7 @@ func generateMermaidImage(fileData Text) (string, error) {
 	log.Println("Mindmap:\n", mindMap)
 
 	log.Println("Generating mermaid image...")
-	return "", generateMermaidInkUrl(mermaidUrl)
+	return generateMermaidInkUrl(mindMap), nil
 }
 
 func imageToBase64(img []byte) string {
@@ -127,6 +127,8 @@ func main() {
 		// 	sendError(err, code, w)
 		// 	return
 		// }
+
+        // exam, err := generateExam(fileData, handler.Filename)
 	})
 
 	http.HandleFunc("POST /api/generate", func(w http.ResponseWriter, r *http.Request) {
