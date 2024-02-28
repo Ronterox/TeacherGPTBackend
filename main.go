@@ -135,7 +135,7 @@ func main() {
 			return
 		}
 
-		exam, err := generateExam[QuestionOpen](fileData, handler.Filename, true)
+		exam, err := generateExam[QuestionOpen](fileData, handler.Filename)
 		if err != nil {
 			sendError(err, http.StatusInternalServerError, w)
 			return
@@ -174,7 +174,7 @@ func main() {
 			return
 		}
 
-		exam, err := generateExam[Question](Text(fileData), handler.Filename, false)
+		exam, err := generateExam[QuestionSimple](Text(fileData), handler.Filename)
 		if err != nil {
 			sendError(err, http.StatusInternalServerError, w)
 			return

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"reflect"
 	"strconv"
 )
 
@@ -49,7 +50,7 @@ func generateMermaidInkUrl(mermaid string) string {
 	return "https://mermaid.ink/img/" + base64.URLEncoding.EncodeToString([]byte(mermaid))
 }
 
-func generateExam[T Question | QuestionOpen](file Text, fileName string, open bool) ([]byte, error) {
+func generateExam[T QuestionSimple | QuestionOpen](file Text, fileName string) ([]byte, error) {
 	log.Println("Generating exam from file:", fileName)
 
 	if tokens, _ := file.tokenize(); tokens > TOKEN_LIMIT {
@@ -58,21 +59,24 @@ func generateExam[T Question | QuestionOpen](file Text, fileName string, open bo
 		for i := range CHUNKS {
 			log.Printf("Generating exam from file: %s_%d... current %d of %d\n", fileName, i, i, CHUNKS)
 
-			chunkFile := file[i*TOKEN_LIMIT : (i+1)*TOKEN_LIMIT]
+			chunkText := file[i*TOKEN_LIMIT : (i+1)*TOKEN_LIMIT]
 			chunkName := fileName + "_" + strconv.Itoa(i)
 
 			chunkPath := "outputs/" + chunkName + ".chunk"
 			if _, err := os.Stat(chunkPath); err != nil {
-				chunkFile.save(chunkPath)
+				chunkText.save(chunkPath)
 			}
 
-			bytes, err := generateExam[T](chunkFile, chunkName, open)
+			bytes, err := generateExam[T](chunkText, chunkName)
 			if err != nil {
 				return nil, err
 			}
 
 			var exam []T
 			json.Unmarshal(bytes, &exam)
+
+            // for _, question := range exam {
+            // }
 
 			examResult = append(examResult, exam...)
 		}
@@ -94,7 +98,8 @@ func generateExam[T Question | QuestionOpen](file Text, fileName string, open bo
 		return os.ReadFile(outPath)
 	}
 
-	completion, err := generateJsonAndSave(file, outPath, open)
+    var t T
+	completion, err := generateJsonAndSave(file, outPath, reflect.TypeOf(t) == reflect.TypeOf(QuestionOpen{}))
 	if err != nil {
 		return nil, err
 	}

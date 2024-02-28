@@ -16,32 +16,41 @@ const GPTInputPrice = 0.0005 * 0.001
 const GPTOutputPrice = 0.0015 * 0.001
 
 type Question struct {
-	Topic   string   `json:"topic"`
-	Content string   `json:"content"`
+	Topic   string `json:"topic"`
+	Content string `json:"content"`
+	Chunk   string `json:"chunk"`
+}
+
+type QuestionSimple struct {
+	Question
 	Options []string `json:"options"`
 	Answer  int      `json:"answer"`
 }
 
 type QuestionOpen struct {
-	Topic   string `json:"topic"`
-	Content string `json:"content"`
+	Question
 	Answer  string `json:"answer"`
 	Correct bool   `json:"correct"`
 	Reason  string `json:"reason"`
-	Chunk   string `json:"chunk"`
 }
 
 func getJsonTemplate() (string, error) {
-	list := []Question{
-		Question{
-			Topic:   "Computadoras",
-			Content: "¿Qué es la memoria RAM?",
+	list := []QuestionSimple{
+		QuestionSimple{
+			Question: Question{
+				Topic:   "Computadoras",
+				Content: "¿Qué es la memoria RAM?",
+				Chunk:   "La memoria RAM es una memoria de acceso aleatorio que se utiliza para almacenar datos e instrucciones. Es una memoria volátil, lo que significa que los datos se pierden cuando se apaga la computadora. La memoria RAM es más rápida que la memoria de almacenamiento a largo plazo, como los discos duros y las unidades de estado sólido, pero también es más cara y tiene una capacidad de almacenamiento más limitada.",
+			},
 			Options: []string{"Memoria de solo lectura", "Memoria de acceso aleatorio", "Memoria de solo escritura", "Memoria de acceso secuencial"},
 			Answer:  1,
 		},
-		Question{
-			Topic:   "...",
-			Content: "...",
+		QuestionSimple{
+			Question: Question{
+				Topic:   "...",
+				Content: "...",
+				Chunk:   "...",
+			},
 			Options: []string{"...", "...", "...", "..."},
 			Answer:  0,
 		},
@@ -52,19 +61,24 @@ func getJsonTemplate() (string, error) {
 func getJsonTemplateOpen() (string, error) {
 	list := []QuestionOpen{
 		QuestionOpen{
-			Topic:   "Computadoras",
-			Content: "¿Qué es la memoria RAM?",
-			Chunk:   "La memoria RAM es una memoria de acceso aleatorio que se utiliza para almacenar datos e instrucciones. Es una memoria volátil, lo que significa que los datos se pierden cuando se apaga la computadora. La memoria RAM es más rápida que la memoria de almacenamiento a largo plazo, como los discos duros y las unidades de estado sólido, pero también es más cara y tiene una capacidad de almacenamiento más limitada.",
+			Question: Question{
+				Topic:   "Computadoras",
+				Content: "¿Qué es la memoria RAM?",
+				Chunk:   "La memoria RAM es una memoria de acceso aleatorio que se utiliza para almacenar datos e instrucciones. Es una memoria volátil, lo que significa que los datos se pierden cuando se apaga la computadora. La memoria RAM es más rápida que la memoria de almacenamiento a largo plazo, como los discos duros y las unidades de estado sólido, pero también es más cara y tiene una capacidad de almacenamiento más limitada.",
+			},
 		},
 		QuestionOpen{
-			Topic:   "...",
-			Content: "...",
+			Question: Question{
+				Topic:   "...",
+				Content: "...",
+				Chunk:   "...",
+			},
 		},
 	}
 	return getTemplate(list)
 }
 
-func getTemplate[T Question | QuestionOpen](questions []T) (string, error) {
+func getTemplate[T QuestionSimple | QuestionOpen](questions []T) (string, error) {
 	bytes, err := json.MarshalIndent(questions, "", "    ")
 	if err != nil {
 		return "", fmt.Errorf("json.MarshalIndent: %v", err)
@@ -110,7 +124,7 @@ func gptQuestions(data Text, open bool) (string, error) {
 
 	if open {
 		jsonTemplate, err = getJsonTemplateOpen()
-		prompt = `Return a valid json object with test questions about the presented text.
+		prompt = `Return a valid json array with test questions about the presented text.
         The scheme should follow the following example:\n%v`
 		filterPrompt = `Make sure to write the questions in Spanish.
         If you aren't able to generate a question with the given text return an empty array.`
