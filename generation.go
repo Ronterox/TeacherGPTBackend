@@ -75,7 +75,7 @@ func generateExam(file Text, fileName string) ([]byte, error) {
 		CHUNKS := tokens / TOKEN_LIMIT
 		var examResult []Question
 		for i := range CHUNKS {
-			log.Println("Generating exam from file:", fileName+"_"+strconv.Itoa(i)+"... current", i, "of", CHUNKS)
+			log.Printf("Generating exam from file: %s_%d... current %d of %d\n", fileName, i, i, CHUNKS)
 
 			chunkFile := file[i*TOKEN_LIMIT : (i+1)*TOKEN_LIMIT]
 			chunkName := fileName + "_" + strconv.Itoa(i)

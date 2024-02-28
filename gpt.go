@@ -22,9 +22,16 @@ type Question struct {
 	Answer  int      `json:"answer"`
 }
 
+type QuestionOpen struct {
+	Topic   string `json:"topic"`
+	Content string `json:"content"`
+	Answer  string `json:"answer"`
+	Correct bool   `json:"correct"`
+	Reason  string `json:"reason"`
+}
+
 func getJsonTemplate() (string, error) {
-	// Make this an array
-	bytes, err := json.MarshalIndent([]Question{
+	list := []Question{
 		Question{
 			Topic:   "Computadoras",
 			Content: "¿Qué es la memoria RAM?",
@@ -37,12 +44,29 @@ func getJsonTemplate() (string, error) {
 			Options: []string{"...", "...", "...", "..."},
 			Answer:  0,
 		},
-	}, "", "    ")
-
-	if err != nil {
-		return "", fmt.Errorf("MarshalIndent: %v", err)
 	}
+	return getTemplate(list)
+}
 
+func getJsonTemplateOpen() (string, error) {
+	list := []QuestionOpen{
+		QuestionOpen{
+			Topic:   "Computadoras",
+			Content: "¿Qué es la memoria RAM?",
+		},
+		QuestionOpen{
+			Topic:   "...",
+			Content: "...",
+		},
+	}
+	return getTemplate(list)
+}
+
+func getTemplate[T Question | QuestionOpen](questions []T) (string, error) {
+	bytes, err := json.MarshalIndent(questions, "", "    ")
+	if err != nil {
+		return "", fmt.Errorf("json.MarshalIndent: %v", err)
+	}
 	return string(bytes), nil
 }
 
@@ -116,7 +140,7 @@ func gptMindMap(data Text) (string, error) {
     This is an example of how a Mindmap should look like:\n%v`
 	filterPrompt := `The syntax for creating Mindmaps relies on indentation for setting the levels in the hierarchy.
     Please use the following syntax )For the root(, (For Titles) and [For subtitles].`
-    jailPrompt := `Don't ever use parenthesis inside of brackets. You can only use tabs and spaces for indentation. 
+	jailPrompt := `Don't ever use parenthesis inside of brackets. You can only use tabs and spaces for indentation. 
     There can only be one root, at idented level 0, and please return the content in Spanish.`
 
 	systemPrompts := []gpt3.ChatCompletionRequestMessage{
