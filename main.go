@@ -154,8 +154,8 @@ func main() {
 
 		stringJson, _ := json.MarshalIndent(openQuestions, "", "    ")
 		res, err := gpt(string(stringJson), []gpt3.ChatCompletionRequestMessage{
-			{Role: "system", Content: "Return a valid json object with the correct answers for the presented questions."},
-			{Role: "system", Content: "Make sure to write the answers in Spanish."}})
+			{Role: "system", Content: fmt.Sprintf("Return a valid json object with the correct answers for each question.\nThe scheme should follow the following:\n%v", stringJson)},
+			{Role: "system", Content: "Make sure to write the comments in Spanish."}})
 
         if err != nil {
             sendError(err, http.StatusInternalServerError, w)
