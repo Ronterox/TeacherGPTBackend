@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"mime/multipart"
 	"net/http"
 	"strconv"
 	"strings"
@@ -27,23 +26,31 @@ func sendOk(w http.ResponseWriter, data []byte) {
 	w.Write(data)
 }
 
-// Handles the file sent in the request and returns the file data, the file header and an error if any
-// If an error is returned, the file data will be the error code
-func handleFile(r *http.Request) (Text, *multipart.FileHeader, error) {
+// Handles the file sent in the request and returns the request data
+// In case of error, it returns the error code and the error
+func handleFile(r *http.Request) (Text, string, int, error) {
 	log.Println("Handling file...")
-	file, handler, err := r.FormFile("file")
-	if err != nil {
-		return Text(strconv.Itoa(http.StatusBadRequest)), handler, err
+
+    handleError := func(code int, err error) (Text, string, int, error) {
+        return "", "", code, err
+    }
+
+	file, handler, errF := r.FormFile("file")
+    numString := r.FormValue("num")
+    numQuestions, errN := strconv.Atoi(numString)
+	if errF != nil || errN != nil {
+        return handleError(http.StatusBadRequest, fmt.Errorf("Error parsing file or num parameter: %v, %v", errF, errN))
 	}
 	defer file.Close()
+
 
 	log.Println("Parsing " + handler.Filename + "...")
 	fileData, err := parseFile(handler.Filename, file)
 	if err != nil {
-		return Text(strconv.Itoa(http.StatusInternalServerError)), handler, err
+        return handleError(http.StatusBadRequest, err)
 	}
 
-	return Text(fileData), handler, nil
+	return Text(fileData), handler.Filename, numQuestions, nil
 }
 
 func generateMermaidImage(fileData Text) (string, error) {
@@ -90,14 +97,13 @@ func sendTemplate(w http.ResponseWriter, generateTemplate func() (string, error)
 
 func main() {
 	http.HandleFunc("GET /api/template", func(w http.ResponseWriter, r *http.Request) { sendTemplate(w, getJsonTemplate) })
-
 	http.HandleFunc("GET /api/template/open", func(w http.ResponseWriter, r *http.Request) { sendTemplate(w, getJsonTemplateOpen) })
 
 	http.HandleFunc("POST /api/summary", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Generating summary image...")
 		allowCORS(w)
 
-		fileData, _, err := handleFile(r)
+		fileData, _, _, err := handleFile(r)
 		if code, _ := strconv.Atoi(string(fileData)); err != nil {
 			sendError(err, code, w)
 			return
@@ -115,16 +121,13 @@ func main() {
 	http.HandleFunc("POST /api/generate/open", func(w http.ResponseWriter, r *http.Request) {
 		setJsonCORSHeader(w)
 
-		fileData, handler, err := handleFile(r)
+		fileData, fileName, numQuestions, err := handleFile(r)
 		if code, _ := strconv.Atoi(string(fileData)); err != nil {
 			sendError(err, code, w)
 			return
 		}
 
-		numString := r.FormValue("num")
-		numQuestions, _ := strconv.Atoi(numString)
-
-		exam, err := generateExam[QuestionOpen](fileData, handler.Filename, numQuestions)
+		exam, err := generateExam[QuestionOpen](fileData, fileName, numQuestions)
 		if err != nil {
 			sendError(err, http.StatusInternalServerError, w)
 			return
@@ -135,14 +138,16 @@ func main() {
 
 	http.HandleFunc("POST /api/correct", func(w http.ResponseWriter, r *http.Request) {
 		setJsonCORSHeader(w)
+
 		var openQuestions []QuestionOpen
 		if err := json.NewDecoder(r.Body).Decode(&openQuestions); err != nil {
 			sendError(err, http.StatusBadRequest, w)
 			return
 		}
-		log.Printf("User answers: %v\n", openQuestions)
 
+		log.Printf("User answers: %v\n", openQuestions)
 		stringJson, _ := json.MarshalIndent(openQuestions, "", "    ")
+
 		res, err := gpt(string(stringJson), []gpt3.ChatCompletionRequestMessage{
 			{Role: "system", Content: fmt.Sprintf("Change the value of the correct field to true if the answer field matches the content field, answer with the same json but add your changes. The json is:\n%v", string(stringJson))},
 			{Role: "system", Content: "Make sure to write the reason in Spanish. Be really strict about the answer matching the content field."}})
@@ -152,7 +157,6 @@ func main() {
 		}
 
 		var asQuestions []QuestionOpen
-
 		if err := json.Unmarshal([]byte(res), &asQuestions); err != nil {
 			log.Println("Error parsing JSON", string(res))
 			sendError(err, http.StatusInternalServerError, w)
@@ -167,18 +171,13 @@ func main() {
 	http.HandleFunc("POST /api/generate", func(w http.ResponseWriter, r *http.Request) {
 		setJsonCORSHeader(w)
 
-		fileData, handler, err := handleFile(r)
+		fileData, fileName, numQuestions, err := handleFile(r)
 		if code, _ := strconv.Atoi(string(fileData)); err != nil {
 			sendError(err, code, w)
 			return
 		}
 
-		numString := r.FormValue("num")
-		numQuestions, _ := strconv.Atoi(numString)
-
-		println("num: ", numQuestions)
-
-		exam, err := generateExam[QuestionSimple](Text(fileData), handler.Filename, numQuestions)
+		exam, err := generateExam[QuestionSimple](Text(fileData), fileName, numQuestions)
 		if err != nil {
 			sendError(err, http.StatusInternalServerError, w)
 			return
