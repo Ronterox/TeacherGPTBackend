@@ -8,7 +8,6 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
@@ -98,22 +97,9 @@ func main() {
 		log.Println("Generating summary image...")
 		allowCORS(w)
 
-		fileData, handler, err := handleFile(r)
+		fileData, _, err := handleFile(r)
 		if code, _ := strconv.Atoi(string(fileData)); err != nil {
 			sendError(err, code, w)
-			return
-		}
-
-		filePath := fmt.Sprintf("outputs/%v.jpg", handler.Filename)
-
-		if _, err := os.Stat(filePath); !os.IsNotExist(err) {
-			log.Println("Caching image file...")
-			img, err := os.ReadFile(filePath)
-			if err != nil {
-				sendError(err, http.StatusInternalServerError, w)
-				return
-			}
-			sendOk(w, []byte(imageToBase64(img)))
 			return
 		}
 

@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"log"
-	"os"
 	"reflect"
 	"strconv"
 )
@@ -12,11 +11,6 @@ import (
 type Text string
 
 const TOKEN_LIMIT = 512
-
-func (text Text) save(outPath string) error {
-	log.Println("Saving file:", outPath)
-	return os.WriteFile(outPath, []byte(text), 0644)
-}
 
 func (text Text) printPriceApprox(tokensValue float32) error {
 	log.Println("Tokenizing text...")
@@ -29,21 +23,12 @@ func (text Text) printPriceApprox(tokensValue float32) error {
 	return nil
 }
 
-func generateDir(outPath string) error {
-	log.Println("Checking for directory:", outPath)
-	if err := os.Mkdir(outPath, 0755); err != nil && !os.IsExist(err) {
-		return err
-	}
-	return nil
-}
-
-func generateJsonAndSave(file Text, outPath string, open bool) (Text, error) {
+func generateJson(file Text, open bool) (Text, error) {
 	completion, err := gptQuestions(file, open)
 	if err != nil {
 		return "", err
 	}
-	completionText := Text(completion)
-	return completionText, completionText.save(outPath)
+	return Text(completion), nil
 }
 
 func generateMermaidInkUrl(mermaid string) string {
@@ -62,11 +47,6 @@ func generateExam[T QuestionSimple | QuestionOpen](file Text, fileName string) (
 			chunkText := file[i*TOKEN_LIMIT : (i+1)*TOKEN_LIMIT]
 			chunkName := fileName + "_" + strconv.Itoa(i)
 
-			chunkPath := "outputs/" + chunkName + ".chunk"
-			if _, err := os.Stat(chunkPath); err != nil {
-				chunkText.save(chunkPath)
-			}
-
 			bytes, err := generateExam[T](chunkText, chunkName)
 			if err != nil {
 				return nil, err
@@ -75,8 +55,8 @@ func generateExam[T QuestionSimple | QuestionOpen](file Text, fileName string) (
 			var exam []T
 			json.Unmarshal(bytes, &exam)
 
-            // for _, question := range exam {
-            // }
+			// for _, question := range exam {
+			// }
 
 			examResult = append(examResult, exam...)
 		}
@@ -88,24 +68,13 @@ func generateExam[T QuestionSimple | QuestionOpen](file Text, fileName string) (
 		return nil, err
 	}
 
-	if err := generateDir("outputs"); err != nil {
-		return nil, err
-	}
-
-	outPath := "outputs/" + fileName + ".json"
-	if _, err := os.Stat(outPath); err == nil {
-		log.Println("Using cached file:", outPath)
-		return os.ReadFile(outPath)
-	}
-
-    var t T
-	completion, err := generateJsonAndSave(file, outPath, reflect.TypeOf(t) == reflect.TypeOf(QuestionOpen{}))
+	var t T
+	completion, err := generateJson(file, reflect.TypeOf(t) == reflect.TypeOf(QuestionOpen{}))
 	if err != nil {
 		return nil, err
 	}
 
-	log.Println("Exam generated and saved to " + outPath)
-	log.Println(completion)
+	log.Println("Exam generated", completion)
 
 	completion.printPriceApprox(GPTOutputPrice)
 	return []byte(completion), nil

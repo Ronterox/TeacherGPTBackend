@@ -6,7 +6,7 @@ import (
 
 	"code.sajari.com/docconv/v2"
 	"github.com/pkoukk/tiktoken-go"
-	"github.com/pkoukk/tiktoken-go-loader"
+	tiktoken_loader "github.com/pkoukk/tiktoken-go-loader"
 )
 
 func parseDocument(docPath string) (Text, error) {
@@ -19,12 +19,12 @@ func parseDocument(docPath string) (Text, error) {
 }
 
 func parseFile(fileName string, file io.Reader) (Text, error) {
-    res, err := docconv.Convert(file, docconv.MimeTypeByExtension(fileName), true)
-    if err != nil {
-        return "", err
-    }
+	res, err := docconv.Convert(file, docconv.MimeTypeByExtension(fileName), true)
+	if err != nil {
+		return "", err
+	}
 
-    return Text(res.Body), nil
+	return Text(res.Body), nil
 }
 
 func parseAndWrite(filePath string, parser func(string) (Text, error), outPath string) (Text, error) {
@@ -33,7 +33,7 @@ func parseAndWrite(filePath string, parser func(string) (Text, error), outPath s
 	if err != nil {
 		return "", err
 	}
-	return text, text.save(outPath)
+	return text, nil
 }
 
 func (text Text) tokenize() (tokens int, err error) {
