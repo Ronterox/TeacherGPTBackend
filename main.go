@@ -151,11 +151,12 @@ func main() {
 			sendError(err, http.StatusBadRequest, w)
 			return
 		}
+		log.Printf("User answers: %v\n", openQuestions)
 
 		stringJson, _ := json.MarshalIndent(openQuestions, "", "    ")
 		res, err := gpt(string(stringJson), []gpt3.ChatCompletionRequestMessage{
-			{Role: "system", Content: fmt.Sprintf("Change the value of the correct field to true, or false if the answer field is the answer field answers the content field, write the reason if it doesn't:\n%v", string(stringJson))},
-			{Role: "system", Content: "Make sure to write the comments in Spanish."}})
+			{Role: "system", Content: fmt.Sprintf("Change the value of the correct field to true if the answer field matches the content field, answer with the same json but add your changes. The json is:\n%v", string(stringJson))},
+			{Role: "system", Content: "Make sure to write the reason in Spanish. Be really strict about the answer matching the content field."}})
 		if err != nil {
 			sendError(err, http.StatusInternalServerError, w)
 			return
@@ -168,6 +169,8 @@ func main() {
 			sendError(err, http.StatusInternalServerError, w)
 			return
 		}
+
+		log.Println("Successfully parsed JSON", string(res))
 
 		sendOk(w, []byte(res))
 	})
