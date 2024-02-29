@@ -35,7 +35,7 @@ func generateMermaidInkUrl(mermaid string) string {
 	return "https://mermaid.ink/img/" + base64.URLEncoding.EncodeToString([]byte(mermaid))
 }
 
-func generateExam[T QuestionSimple | QuestionOpen](file Text, fileName string) ([]byte, error) {
+func generateExam[T QuestionInterface](file Text, fileName string, numberOfQuestions int) ([]byte, error) {
 	log.Println("Generating exam from file:", fileName)
 
 	if tokens, _ := file.tokenize(); tokens > TOKEN_LIMIT {
@@ -47,7 +47,7 @@ func generateExam[T QuestionSimple | QuestionOpen](file Text, fileName string) (
 			chunkText := file[i*TOKEN_LIMIT : (i+1)*TOKEN_LIMIT]
 			chunkName := fileName + "_" + strconv.Itoa(i)
 
-			bytes, err := generateExam[T](chunkText, chunkName)
+			bytes, err := generateExam[T](chunkText, chunkName, numberOfQuestions - 1)
 			if err != nil {
 				return nil, err
 			}
@@ -55,10 +55,22 @@ func generateExam[T QuestionSimple | QuestionOpen](file Text, fileName string) (
 			var exam []T
 			json.Unmarshal(bytes, &exam)
 
-			// for _, question := range exam {
-			// }
-
 			examResult = append(examResult, exam...)
+		}
+
+		log.Println("Exam Result", len(examResult), "Number of questions", numberOfQuestions)
+		if numberOfQuestions > 0 {
+			for i := range numberOfQuestions {
+				preQuestion := examResult[i]
+				bytes, err := generateExam[T](Text(preQuestion.GetQuestion().Chunk), fileName, 0)
+				if err != nil {
+					return nil, err
+				}
+
+				var exam []T
+				json.Unmarshal(bytes, &exam)
+				examResult = append(examResult, exam...)
+			}
 		}
 
 		return json.MarshalIndent(examResult, "", "    ")

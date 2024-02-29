@@ -15,6 +15,10 @@ const GPTModel = "gpt-3.5-turbo-0125"
 const GPTInputPrice = 0.0005 * 0.001
 const GPTOutputPrice = 0.0015 * 0.001
 
+type QuestionInterface interface {
+	GetQuestion() *Question
+}
+
 type Question struct {
 	Topic   string `json:"topic"`
 	Content string `json:"content"`
@@ -32,6 +36,14 @@ type QuestionOpen struct {
 	Answer  string `json:"answer"`
 	Correct bool   `json:"correct"`
 	Reason  string `json:"reason"`
+}
+
+func (q QuestionOpen) GetQuestion() (*Question) {
+	return &q.Question
+}
+
+func (q QuestionSimple) GetQuestion() (*Question) {
+	return &q.Question
 }
 
 func getJsonTemplate() (string, error) {

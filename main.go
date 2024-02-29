@@ -121,7 +121,10 @@ func main() {
 			return
 		}
 
-		exam, err := generateExam[QuestionOpen](fileData, handler.Filename)
+		numString := r.FormValue("num")
+		numQuestions, _ := strconv.Atoi(numString)
+
+		exam, err := generateExam[QuestionOpen](fileData, handler.Filename, numQuestions)
 		if err != nil {
 			sendError(err, http.StatusInternalServerError, w)
 			return
@@ -170,7 +173,12 @@ func main() {
 			return
 		}
 
-		exam, err := generateExam[QuestionSimple](Text(fileData), handler.Filename)
+		numString := r.FormValue("num")
+		numQuestions, _ := strconv.Atoi(numString)
+
+		println("num: ", numQuestions)
+
+		exam, err := generateExam[QuestionSimple](Text(fileData), handler.Filename, numQuestions)
 		if err != nil {
 			sendError(err, http.StatusInternalServerError, w)
 			return
