@@ -36,7 +36,7 @@ type QuestionOpen struct {
 
 func getJsonTemplate() (string, error) {
 	list := []QuestionSimple{
-		QuestionSimple{
+		{
 			Question: Question{
 				Topic:   "Computadoras",
 				Content: "¿Qué es la memoria RAM?",
@@ -45,7 +45,7 @@ func getJsonTemplate() (string, error) {
 			Options: []string{"Memoria de solo lectura", "Memoria de acceso aleatorio", "Memoria de solo escritura", "Memoria de acceso secuencial"},
 			Answer:  1,
 		},
-		QuestionSimple{
+		{
 			Question: Question{
 				Topic:   "...",
 				Content: "...",
@@ -60,14 +60,14 @@ func getJsonTemplate() (string, error) {
 
 func getJsonTemplateOpen() (string, error) {
 	list := []QuestionOpen{
-		QuestionOpen{
+		{
 			Question: Question{
 				Topic:   "Computadoras",
 				Content: "¿Qué es la memoria RAM?",
 				Chunk:   "La memoria RAM es una memoria de acceso aleatorio que se utiliza para almacenar datos e instrucciones. Es una memoria volátil, lo que significa que los datos se pierden cuando se apaga la computadora. La memoria RAM es más rápida que la memoria de almacenamiento a largo plazo, como los discos duros y las unidades de estado sólido, pero también es más cara y tiene una capacidad de almacenamiento más limitada.",
 			},
 		},
-		QuestionOpen{
+		{
 			Question: Question{
 				Topic:   "...",
 				Content: "...",
