@@ -40,8 +40,12 @@ func handleFile(r *http.Request) (Text, string, int, error) {
 
     numQuestions, errN := strconv.Atoi(numString)
 
+    if errN != nil {
+        numQuestions = 1
+    }
+
     log.Println("Parsing form...")
-	if errF != nil || errN != nil {
+	if errF != nil {
         return handleError(http.StatusBadRequest, fmt.Errorf("Error parsing file or num parameter: %v, %v", errF, errN))
 	}
 	defer file.Close()
