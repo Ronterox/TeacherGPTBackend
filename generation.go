@@ -39,7 +39,8 @@ func generateExam[T QuestionInterface](file Text, fileName string, numberOfQuest
                 log.Printf("Generating exam from file: %s... current %d of %d\n", fileName, i, CHUNKS)
 
                 chunkLimit := math.Min(float64((i+1)*TOKEN_LIMIT * 3), float64(len(file)))
-                chunkText := file[i*TOKEN_LIMIT * 3 : int(chunkLimit)]
+                chunkStart := math.Min(float64(i*TOKEN_LIMIT * 3), chunkLimit)
+                chunkText := file[int(chunkStart) : int(chunkLimit)]
                 chunkName := fileName + "_" + strconv.Itoa(i)
 
                 if len(chunkText) < 32 {
@@ -62,8 +63,10 @@ func generateExam[T QuestionInterface](file Text, fileName string, numberOfQuest
         if numberOfQuestions > 0 {
             for i := range numberOfQuestions {
                 log.Printf("Generating extra questions for file: %s_%d... got %d but %d are left\n", fileName, i, i, numberOfQuestions)
-                chunkLimit := math.Min(float64((i+1)*TOKEN_LIMIT), float64(len(file)))
-                chunk := file[i*TOKEN_LIMIT : int(chunkLimit)]
+
+                chunkLimit := math.Min(float64((i+1)*TOKEN_LIMIT * 3), float64(len(file)))
+                chunkStart := math.Min(float64(i*TOKEN_LIMIT * 3), chunkLimit)
+                chunk := file[int(chunkStart) : int(chunkLimit)]
 
                 if i < len(examResult) {
                     chunk = Text(examResult[i].GetQuestion().Chunk)
