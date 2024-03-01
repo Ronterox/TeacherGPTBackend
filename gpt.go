@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -118,7 +119,15 @@ func gpt(userData string, systemPrompts []gpt3.ChatCompletionRequestMessage) (st
 	})
 	fmt.Printf("%v API call took: %v\n", GPTModel, time.Since(start))
 	if err != nil {
-		return "", fmt.Errorf("ChatCompletion: %v", err)
+        if apiErr, ok := err.(gpt3.APIError); ok {
+            if apiErr.StatusCode == 429 {
+                log.Printf("Waiting 20 seconds for %v API to be available...\n", GPTModel)
+                time.Sleep(20 * time.Second)
+                return gpt(userData, systemPrompts)
+            }
+            return "", fmt.Errorf("API Error: %v\n", apiErr)
+        }
+		return "", fmt.Errorf("ChatCompletion Error: %v", err)
 	}
 
 	usage := resp.Usage

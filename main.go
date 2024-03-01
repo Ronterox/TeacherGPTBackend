@@ -37,7 +37,10 @@ func handleFile(r *http.Request) (Text, string, int, error) {
 
 	file, handler, errF := r.FormFile("file")
     numString := r.FormValue("num")
+
     numQuestions, errN := strconv.Atoi(numString)
+
+    log.Println("Parsing form...")
 	if errF != nil || errN != nil {
         return handleError(http.StatusBadRequest, fmt.Errorf("Error parsing file or num parameter: %v, %v", errF, errN))
 	}
@@ -103,8 +106,8 @@ func main() {
 		log.Println("Generating summary image...")
 		allowCORS(w)
 
-		fileData, _, _, err := handleFile(r)
-		if code, _ := strconv.Atoi(string(fileData)); err != nil {
+		fileData, _, code, err := handleFile(r)
+		if err != nil {
 			sendError(err, code, w)
 			return
 		}
@@ -122,8 +125,8 @@ func main() {
 		setJsonCORSHeader(w)
 
 		fileData, fileName, numQuestions, err := handleFile(r)
-		if code, _ := strconv.Atoi(string(fileData)); err != nil {
-			sendError(err, code, w)
+		if err != nil {
+			sendError(err, numQuestions, w)
 			return
 		}
 
@@ -172,8 +175,8 @@ func main() {
 		setJsonCORSHeader(w)
 
 		fileData, fileName, numQuestions, err := handleFile(r)
-		if code, _ := strconv.Atoi(string(fileData)); err != nil {
-			sendError(err, code, w)
+		if err != nil {
+			sendError(err, numQuestions, w)
 			return
 		}
 

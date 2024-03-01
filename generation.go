@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"log"
+	"math"
 	"reflect"
 	"strconv"
 )
@@ -23,53 +24,64 @@ func (text Text) printPriceApprox(tokensValue float32) error {
 	return nil
 }
 
-func generateJson(file Text, open bool) (Text, error) {
-	completion, err := gptQuestions(file, open)
-	if err != nil {
-		return "", err
-	}
-	return Text(completion), nil
-}
-
 func generateMermaidInkUrl(mermaid string) string {
 	return "https://mermaid.ink/img/" + base64.URLEncoding.EncodeToString([]byte(mermaid))
 }
 
 func generateExam[T QuestionInterface](file Text, fileName string, numberOfQuestions int) ([]byte, error) {
-	log.Println("Generating exam from file:", fileName)
-
-	if tokens, _ := file.tokenize(); tokens > TOKEN_LIMIT || numberOfQuestions > 0 {
-		CHUNKS := tokens / TOKEN_LIMIT
+	if tokens, _ := file.tokenize(); tokens > TOKEN_LIMIT || numberOfQuestions > 1 {
+        log.Println("The whole file has", tokens, "tokens")
 		var examResult []T
-		for i := range CHUNKS {
-			log.Printf("Generating exam from file: %s_%d... current %d of %d\n", fileName, i, i, CHUNKS)
 
-			chunkText := file[i*TOKEN_LIMIT : (i+1)*TOKEN_LIMIT]
-			chunkName := fileName + "_" + strconv.Itoa(i)
+        if tokens > TOKEN_LIMIT {
+            CHUNKS := int(math.Ceil(float64(tokens) / TOKEN_LIMIT))
+            for i := range CHUNKS {
+                log.Printf("Generating exam from file: %s... current %d of %d\n", fileName, i, CHUNKS)
 
-			bytes, err := generateExam[T](chunkText, chunkName, 0)
-			if err != nil {
-                continue
-			}
+                chunkLimit := math.Min(float64((i+1)*TOKEN_LIMIT * 3), float64(len(file)))
+                chunkText := file[i*TOKEN_LIMIT * 3 : int(chunkLimit)]
+                chunkName := fileName + "_" + strconv.Itoa(i)
 
-			var exam []T
-			json.Unmarshal(bytes, &exam)
+                if len(chunkText) < 32 {
+                    continue
+                }
 
-			examResult = append(examResult, exam...)
-            numberOfQuestions--
-		}
+                bytes, err := generateExam[T](chunkText, chunkName, 1)
+                if err != nil {
+                    return nil, err
+                }
 
-		log.Println("Exam Result", len(examResult), "Number of questions", numberOfQuestions)
-        for i := range numberOfQuestions {
-            preQuestion := examResult[i]
-            bytes, err := generateExam[T](Text(preQuestion.GetQuestion().Chunk), fileName, 0)
-            if err != nil {
-                continue
+                var exam []T
+                json.Unmarshal(bytes, &exam)
+
+                examResult = append(examResult, exam...)
+                numberOfQuestions--
             }
+        }
 
-            var exam []T
-            json.Unmarshal(bytes, &exam)
-            examResult = append(examResult, exam...)
+        if numberOfQuestions > 0 {
+            for i := range numberOfQuestions {
+                log.Printf("Generating extra questions for file: %s_%d... got %d but %d are left\n", fileName, i, i, numberOfQuestions)
+                chunkLimit := math.Min(float64((i+1)*TOKEN_LIMIT), float64(len(file)))
+                chunk := file[i*TOKEN_LIMIT : int(chunkLimit)]
+
+                if i < len(examResult) {
+                    chunk = Text(examResult[i].GetQuestion().Chunk)
+                }
+
+                if len(chunk) < 32 {
+                    continue
+                }
+
+                bytes, err := generateExam[T](chunk, fileName, 1)
+                if err != nil {
+                    return nil, err
+                }
+
+                var exam []T
+                json.Unmarshal(bytes, &exam)
+                examResult = append(examResult, exam...)
+            }
         }
 
 		return json.MarshalIndent(examResult, "", "    ")
@@ -80,13 +92,12 @@ func generateExam[T QuestionInterface](file Text, fileName string, numberOfQuest
 	}
 
 	var t T
-	completion, err := generateJson(file, reflect.TypeOf(t) == reflect.TypeOf(QuestionOpen{}))
+	completion, err := gptQuestions(file, reflect.TypeOf(t) == reflect.TypeOf(QuestionOpen{}))
 	if err != nil {
 		return nil, err
 	}
 
 	log.Println("Exam generated", completion)
-
-	completion.printPriceApprox(GPTOutputPrice)
+	Text(completion).printPriceApprox(GPTOutputPrice)
 	return []byte(completion), nil
 }

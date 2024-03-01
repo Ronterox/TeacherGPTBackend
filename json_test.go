@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"math"
 	"testing"
 )
 
@@ -22,4 +23,10 @@ func TestParseJson(t *testing.T) {
 		log.Fatal(err)
 	}
 	log.Printf("%v", questions)
+}
+
+func TestOutofBounds(t *testing.T) {
+    length := len(jsonString)
+    log.Printf("Length: %d", length)
+    log.Printf("Out of bounds: %s", jsonString[0:int(math.Min(float64(2 * length), float64(length)))])
 }
