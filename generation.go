@@ -10,7 +10,7 @@ import (
 
 type Text string
 
-const TOKEN_LIMIT = 512
+const TOKEN_LIMIT = 2048
 
 func (text Text) printPriceApprox(tokensValue float32) {
 	log.Println("Tokenizing text...")
@@ -47,15 +47,15 @@ func generateExtraQuestions[T IQuestion](file Text, fileName string, numberOfQue
 		var template string
 
 		if reflect.TypeOf(examResult[i]) == reflect.TypeOf(QuestionOpen{}) {
-            template = getQuestionOpenTemplate()
+			template = getQuestionOpenTemplate()
 			getPrompt = getPromptQuestionsOpen
 		} else {
-            template = getQuestionTemplate()
+			template = getQuestionTemplate()
 			getPrompt = getPromptQuestions
 		}
 
-		if i < len(examResult) - 1 {
-            template = getTemplate([]IQuestion{examResult[i]})
+		if i < len(examResult)-1 {
+			template = getTemplate([]IQuestion{examResult[i]})
 			chunk = Text(examResult[i].GetQuestion().Chunk)
 		} else {
 			chunk = getChunk(file, i)

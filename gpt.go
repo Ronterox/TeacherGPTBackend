@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"time"
 
@@ -92,15 +93,15 @@ func getQuestionOpenTemplate() string {
 }
 
 func getPromptQuestions(template string) string {
-    prompt := `Return a valid json object with test questions and answers about the presented text. 
+	prompt := `Return a valid json object with test questions and answers about the presented text. 
     The scheme should follow the following example:\n%v`
-    return fmt.Sprintf(prompt, template)
+	return fmt.Sprintf(prompt, template)
 }
 
 func getPromptQuestionsOpen(template string) string {
-    prompt := `Return a valid json array with test questions about the presented text.
+	prompt := `Return a valid json array with test questions about the presented text.
     The scheme should follow the following example:\n%v`
-    return fmt.Sprintf(prompt, template)
+	return fmt.Sprintf(prompt, template)
 }
 
 func getTemplate[T IQuestion](questions []T) string {
@@ -119,7 +120,7 @@ func gpt(userData string, systemPrompts []gpt3.ChatCompletionRequestMessage) (st
 
 	fmt.Printf("Generating %v completion...\n", GPTModel)
 	ctx := context.Background()
-	client := gpt3.NewClient(apiKey)
+	client := gpt3.NewClient(apiKey, gpt3.WithHTTPClient(&http.Client{Timeout: 120 * time.Second}))
 
 	start := time.Now()
 	resp, err := client.ChatCompletion(ctx, gpt3.ChatCompletionRequest{
