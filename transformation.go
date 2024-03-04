@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 
 	"code.sajari.com/docconv/v2"
@@ -27,23 +26,11 @@ func parseFile(fileName string, file io.Reader) (Text, error) {
 	return Text(res.Body), nil
 }
 
-func parseAndWrite(filePath string, parser func(string) (Text, error), outPath string) (Text, error) {
-	fmt.Println("Parsing file:", filePath)
-	text, err := parser(filePath)
-	if err != nil {
-		return "", err
-	}
-	return text, nil
-}
-
-func (text Text) tokenize() (tokens int, err error) {
+func (text Text) tokenize() (tokens int) {
 	tiktoken.SetBpeLoader(tiktoken_loader.NewOfflineLoader())
 
-	tke, err := tiktoken.EncodingForModel(GPTModel)
-	if err != nil {
-		return 0, fmt.Errorf("getEncoding: %v", err)
-	}
+	tke, _ := tiktoken.EncodingForModel(GPTModel)
 
 	token := tke.Encode(string(text), nil, nil)
-	return len(token), nil
+	return len(token)
 }

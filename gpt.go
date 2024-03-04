@@ -16,7 +16,7 @@ const GPTModel = "gpt-3.5-turbo-0125"
 const GPTInputPrice = 0.0005 * 0.001
 const GPTOutputPrice = 0.0015 * 0.001
 
-type QuestionInterface interface {
+type IQuestion interface {
 	GetQuestion() *Question
 }
 
@@ -39,15 +39,15 @@ type QuestionOpen struct {
 	Reason  string `json:"reason"`
 }
 
-func (q QuestionOpen) GetQuestion() (*Question) {
+func (q QuestionOpen) GetQuestion() *Question {
 	return &q.Question
 }
 
-func (q QuestionSimple) GetQuestion() (*Question) {
+func (q QuestionSimple) GetQuestion() *Question {
 	return &q.Question
 }
 
-func getJsonTemplate() (string, error) {
+func getQuestionTemplate() string {
 	list := []QuestionSimple{
 		{
 			Question: Question{
@@ -71,7 +71,7 @@ func getJsonTemplate() (string, error) {
 	return getTemplate(list)
 }
 
-func getJsonTemplateOpen() (string, error) {
+func getQuestionOpenTemplate() string {
 	list := []QuestionOpen{
 		{
 			Question: Question{
@@ -91,12 +91,21 @@ func getJsonTemplateOpen() (string, error) {
 	return getTemplate(list)
 }
 
-func getTemplate[T QuestionSimple | QuestionOpen](questions []T) (string, error) {
-	bytes, err := json.MarshalIndent(questions, "", "    ")
-	if err != nil {
-		return "", fmt.Errorf("json.MarshalIndent: %v", err)
-	}
-	return string(bytes), nil
+func getPromptQuestions(template string) string {
+    prompt := `Return a valid json object with test questions and answers about the presented text. 
+    The scheme should follow the following example:\n%v`
+    return fmt.Sprintf(prompt, template)
+}
+
+func getPromptQuestionsOpen(template string) string {
+    prompt := `Return a valid json array with test questions about the presented text.
+    The scheme should follow the following example:\n%v`
+    return fmt.Sprintf(prompt, template)
+}
+
+func getTemplate[T IQuestion](questions []T) string {
+	bytes, _ := json.MarshalIndent(questions, "", "    ")
+	return string(bytes)
 }
 
 func gpt(userData string, systemPrompts []gpt3.ChatCompletionRequestMessage) (string, error) {
@@ -119,14 +128,14 @@ func gpt(userData string, systemPrompts []gpt3.ChatCompletionRequestMessage) (st
 	})
 	fmt.Printf("%v API call took: %v\n", GPTModel, time.Since(start))
 	if err != nil {
-        if apiErr, ok := err.(gpt3.APIError); ok {
-            if apiErr.StatusCode == 429 {
-                log.Printf("Waiting 20 seconds for %v API to be available...\n", GPTModel)
-                time.Sleep(20 * time.Second)
-                return gpt(userData, systemPrompts)
-            }
-            return "", fmt.Errorf("API Error: %v\n", apiErr)
-        }
+		if apiErr, ok := err.(gpt3.APIError); ok {
+			if apiErr.StatusCode == 429 {
+				log.Printf("Waiting 20 seconds for %v API to be available...\n", GPTModel)
+				time.Sleep(20 * time.Second)
+				return gpt(userData, systemPrompts)
+			}
+			return "", fmt.Errorf("API Error: %v\n", apiErr)
+		}
 		return "", fmt.Errorf("ChatCompletion Error: %v", err)
 	}
 
@@ -139,30 +148,9 @@ func gpt(userData string, systemPrompts []gpt3.ChatCompletionRequestMessage) (st
 	return resp.Choices[0].Message.Content, nil
 }
 
-func gptQuestions(data Text, open bool) (string, error) {
-	var jsonTemplate, prompt, filterPrompt string
-	var err error
-
-	if open {
-		jsonTemplate, err = getJsonTemplateOpen()
-		prompt = `Return a valid json array with test questions about the presented text.
-        The scheme should follow the following example:\n%v`
-		filterPrompt = `Make sure to write the questions in Spanish.
-        If you aren't able to generate a question with the given text return an empty array.`
-	} else {
-		jsonTemplate, err = getJsonTemplate()
-		prompt = `Return a valid json object with test questions and answers about the presented text. 
-        The scheme should follow the following example:\n%v`
-		filterPrompt = `Make sure to write the questions and answers in Spanish.
-        If you aren't able to generate a question with the given text return an empty array.`
-	}
-
-	if err != nil {
-		return "", fmt.Errorf("getJsonTemplate: %v", err)
-	}
-
+func gptQuestions(data Text, prompt string, filterPrompt string) (string, error) {
 	systemPrompts := []gpt3.ChatCompletionRequestMessage{
-		{Role: "system", Content: fmt.Sprintf(prompt, jsonTemplate)},
+		{Role: "system", Content: prompt},
 		{Role: "system", Content: filterPrompt}}
 
 	return gpt(string(data), systemPrompts)

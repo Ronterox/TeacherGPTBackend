@@ -92,19 +92,14 @@ func setJsonCORSHeader(w http.ResponseWriter) {
 	allowCORS(w)
 }
 
-func sendTemplate(w http.ResponseWriter, generateTemplate func() (string, error)) {
+func sendTemplate(w http.ResponseWriter, template string) {
 	setJsonCORSHeader(w)
-	temp, err := generateTemplate()
-	if err != nil {
-		sendError(err, http.StatusInternalServerError, w)
-		return
-	}
-	sendOk(w, []byte(temp))
+	sendOk(w, []byte(template))
 }
 
 func main() {
-	http.HandleFunc("GET /api/template", func(w http.ResponseWriter, r *http.Request) { sendTemplate(w, getJsonTemplate) })
-	http.HandleFunc("GET /api/template/open", func(w http.ResponseWriter, r *http.Request) { sendTemplate(w, getJsonTemplateOpen) })
+	http.HandleFunc("GET /api/template", func(w http.ResponseWriter, r *http.Request) { sendTemplate(w, getQuestionTemplate()) })
+	http.HandleFunc("GET /api/template/open", func(w http.ResponseWriter, r *http.Request) { sendTemplate(w, getQuestionOpenTemplate()) })
 
 	http.HandleFunc("POST /api/summary", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Generating summary image...")
@@ -134,7 +129,8 @@ func main() {
 			return
 		}
 
-		exam, err := generateExam[QuestionOpen](fileData, fileName, numQuestions)
+        prompt := getPromptQuestionsOpen(getQuestionOpenTemplate())
+		exam, err := generateExam[QuestionOpen](fileData, fileName, numQuestions, prompt)
 		if err != nil {
 			sendError(err, http.StatusInternalServerError, w)
 			return
@@ -157,7 +153,7 @@ func main() {
 
 		res, err := gpt(string(stringJson), []gpt3.ChatCompletionRequestMessage{
 			{Role: "system", Content: fmt.Sprintf("Change the value of the correct field to true if the answer field matches the content field, answer with the same json but add your changes. The json is:\n%v", string(stringJson))},
-			{Role: "system", Content: "Make sure to write the reason in Spanish. Be really strict about the answer matching the content field."}})
+			{Role: "system", Content: "Make sure to write the reason in Spanish. Be really strict about changing the correct field to true only if it really matches the chunk."},})
 		if err != nil {
 			sendError(err, http.StatusInternalServerError, w)
 			return
@@ -184,7 +180,8 @@ func main() {
 			return
 		}
 
-		exam, err := generateExam[QuestionSimple](Text(fileData), fileName, numQuestions)
+        prompt := getPromptQuestions(getQuestionTemplate())
+		exam, err := generateExam[QuestionSimple](Text(fileData), fileName, numQuestions, prompt)
 		if err != nil {
 			sendError(err, http.StatusInternalServerError, w)
 			return
