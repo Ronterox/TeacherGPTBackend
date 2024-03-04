@@ -96,7 +96,11 @@ func generateExamsList[T IQuestion](file Text, fileName string, numberOfQuestion
 			}
 
 			examResult, err = appendExamBytes(examResult, bytes)
-			numberOfQuestions--
+			if err != nil {
+				return nil, err
+			}
+
+			numberOfQuestions -= len(examResult)
 		}
 	}
 
