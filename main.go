@@ -117,6 +117,7 @@ func main() {
 			return
 		}
 
+        log.Println("URL:", img)
 		sendOk(w, []byte(img))
 	})
 
