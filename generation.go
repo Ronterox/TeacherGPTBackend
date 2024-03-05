@@ -46,13 +46,14 @@ func generateExtraQuestions[T IQuestion](file Text, fileName string, numberOfQue
 		var getPrompt func(string) string
 		var template string
 
-		if reflect.TypeOf(examResult[i]) == reflect.TypeOf(QuestionOpen{}) {
-			template = getQuestionOpenTemplate()
-			getPrompt = getPromptQuestionsOpen
-		} else {
-			template = getQuestionTemplate()
-			getPrompt = getPromptQuestions
-		}
+        switch any(examResult[0]).(type) { 
+        case QuestionOpen:
+            template = getQuestionOpenTemplate()
+            getPrompt = getPromptQuestionsOpen
+        case QuestionSimple:
+            template = getQuestionTemplate()
+            getPrompt = getPromptQuestions
+        }
 
 		if i < len(examResult)-1 {
 			template = getTemplate([]IQuestion{examResult[i]})
@@ -80,7 +81,7 @@ func generateExamsList[T IQuestion](file Text, fileName string, numberOfQuestion
 	log.Println("The whole file has", tokens, "tokens")
 	var examResult []T
 
-	if tokens > TOKEN_LIMIT {
+	if tokens > TOKEN_LIMIT || numberOfQuestions > 1 {
 		CHUNKS := int(math.Ceil(float64(tokens) / TOKEN_LIMIT))
 		for i := range CHUNKS {
 			log.Printf("Generating exam from file: %s... current %d of %d\n", fileName, i, CHUNKS)
